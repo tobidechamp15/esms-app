@@ -1,7 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 
-import { apiClient, saveTokens } from './client';
-import { AUTH_ENDPOINTS, STORAGE_KEYS } from '@/constants/api';
+import { AUTH_ENDPOINTS, STORAGE_KEYS } from "@/constants/api";
 import type {
   ApiResponse,
   AuthTokens,
@@ -9,7 +8,8 @@ import type {
   RegisterPayload,
   User,
   UserStatus,
-} from '@/types';
+} from "@/types";
+import { apiClient, saveTokens } from "./client";
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
@@ -18,13 +18,18 @@ export interface RegisterResponse {
   tokens: AuthTokens;
 }
 
-export async function register(payload: RegisterPayload): Promise<RegisterResponse> {
+export async function register(
+  payload: RegisterPayload,
+): Promise<RegisterResponse> {
   const { data } = await apiClient.post<ApiResponse<RegisterResponse>>(
     AUTH_ENDPOINTS.REGISTER,
     payload,
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+  await SecureStore.setItemAsync(
+    STORAGE_KEYS.USER,
+    JSON.stringify(data.data.user),
+  );
   return data.data;
 }
 
@@ -41,7 +46,10 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     payload,
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+  await SecureStore.setItemAsync(
+    STORAGE_KEYS.USER,
+    JSON.stringify(data.data.user),
+  );
   return data.data;
 }
 
