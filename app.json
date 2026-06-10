@@ -14,7 +14,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "ESMS uses the camera to scan visitor QR codes at the estate gate.",
         "NSPhotoLibraryUsageDescription": "ESMS may save QR code images for sharing.",
-        "NSFaceIDUsageDescription": "ESMS uses Face ID for secure PIN-free unlock."
+        "NSFaceIDUsageDescription": "ESMS uses Face ID for secure PIN-free unlock.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
