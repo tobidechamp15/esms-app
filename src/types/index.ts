@@ -1,90 +1,74 @@
-// ─── User ────────────────────────────────────────────────────────────────────
+// ─── User ─────────────────────────────────────────────────────────────────────
 
 export type UserRole = 'resident' | 'security' | 'admin';
-
-export type UserStatus = 'pending' | 'active' | 'suspended';
+export type UserStatus = 'active' | 'suspended' | 'deleted';
 
 export interface User {
   id: string;
-  name: string;
-  email: string;
+  firstName: string;
+  lastName: string;
   phone: string;
+  houseNumber: string;
+  streetName: string;
   role: UserRole;
   status: UserStatus;
-  unitNumber?: string;
-  avatarUrl?: string;
+  pushToken?: string | null;
+  notificationPreferences?: {
+    pushNotifications: boolean;
+    appUpdates: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
-// ─── Visit ───────────────────────────────────────────────────────────────────
+// ─── Estate ───────────────────────────────────────────────────────────────────
 
-export type VisitStatus = 'scheduled' | 'checked_in' | 'checked_out' | 'cancelled' | 'expired';
-
-export type VisitPurpose =
-  | 'personal'
-  | 'delivery'
-  | 'maintenance'
-  | 'official'
-  | 'other';
-
-export interface Visitor {
-  name: string;
-  phone: string;
-  vehiclePlate?: string;
-  identificationNumber?: string;
+export interface EstateInfo {
+  estateId: string;
+  estateName: string;
+  bannerImageUrl?: string;
 }
+
+// ─── Visit / Access Code ──────────────────────────────────────────────────────
+
+export type VisitStatus =
+  | 'scheduled'
+  | 'checked_in'
+  | 'checked_out'
+  | 'cancelled'
+  | 'expired'
+  | 'revoked';
 
 export interface Visit {
   id: string;
   residentId: string;
-  resident?: Pick<User, 'id' | 'name' | 'unitNumber'>;
-  visitor: Visitor;
-  purpose: VisitPurpose;
-  purposeNote?: string;
+  visitorName: string;
+  visitDate: string;          // YYYY-MM-DD
+  expectedArrivalTime: string; // HH:MM
+  accessCode: string;          // 5-digit numeric
+  qrCodeData: string;
   status: VisitStatus;
-  qrCode: string;
   scheduledAt: string;
   expiresAt: string;
-  checkedInAt?: string;
-  checkedOutAt?: string;
-  checkedInByUserId?: string;
-  checkedOutByUserId?: string;
+  checkedInAt?: string | null;
+  checkedOutAt?: string | null;
+  revokedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateVisitPayload {
   visitorName: string;
-  visitorPhone: string;
-  visitorVehiclePlate?: string;
-  visitorIdentificationNumber?: string;
-  purpose: VisitPurpose;
-  purposeNote?: string;
-  scheduledAt: string;
-  expiresAt: string;
+  visitDate: string;
+  expectedArrivalTime: string;
 }
 
-export interface VerifyQRPayload {
-  qrCode: string;
-  action: 'check_in' | 'check_out';
+export interface TodayStats {
+  expectedToday: number;
+  enteredToday: number;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface RegisterPayload {
-  name: string;
-  email: string;
-  password: string;
-  phone: string;
-  role: Extract<UserRole, 'resident' | 'security'>;
-  unitNumber?: string;
-}
 
 export interface AuthTokens {
   accessToken: string;
@@ -101,30 +85,49 @@ export interface AuthState {
   error: string | null;
 }
 
-// ─── Visit Store ──────────────────────────────────────────────────────────────
-
-export interface VisitState {
-  visits: Visit[];
-  currentVisit: Visit | null;
-  isLoading: boolean;
-  isFetching: boolean;
-  error: string | null;
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
+export interface OtpVerifyResponse {
+  otpToken: string;
+  isExistingUser: boolean;
 }
 
-// ─── API ──────────────────────────────────────────────────────────────────────
-
-export interface ApiError {
-  message: string;
-  code?: string;
-  statusCode?: number;
-  errors?: Record<string, string[]>;
+export interface RegisterPhonePayload {
+  firstName: string;
+  lastName: string;
+  houseNumber: string;
+  streetName: string;
 }
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export type NotificationType = 'security_notice' | 'estate_update' | 'visitor_alert';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  pushNotifications: boolean;
+  appUpdates: boolean;
+  pushToken?: string | null;
+}
+
+// ─── Concern / Report ─────────────────────────────────────────────────────────
+
+export interface Concern {
+  id: string;
+  subject: string;
+  address: string;
+  attachmentUrl?: string | null;
+  status: 'submitted' | 'under_review' | 'resolved';
+  submittedAt: string;
+}
+
+// ─── API Shapes ───────────────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {
   data: T;
@@ -141,4 +144,11 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
   success: boolean;
+}
+
+export interface ApiError {
+  message: string;
+  code?: string;
+  statusCode?: number;
+  errors?: Record<string, string[]>;
 }

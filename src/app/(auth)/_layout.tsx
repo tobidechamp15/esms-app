@@ -1,22 +1,18 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 
 export default function AuthLayout() {
   return (
-    <>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-          contentStyle: { backgroundColor: 'transparent' },
-        }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-        <Stack.Screen name="pin-setup" />
-        <Stack.Screen name="pin-unlock" />
-        <Stack.Screen name="pending-approval" />
-      </Stack>
-    </>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+      <Stack.Screen name="estate-pin" />
+      <Stack.Screen name="phone" />
+      <Stack.Screen name="otp" />
+      <Stack.Screen name="complete-profile" />
+      <Stack.Screen name="create-pin" />
+      <Stack.Screen name="confirm-pin" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="pin-lock" options={{ animation: 'fade', gestureEnabled: false }} />
+      <Stack.Screen name="forgot-pin" />
+    </Stack>
   );
 }

@@ -1,56 +1,45 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  Redirect,
-  Slot,
-  ThemeProvider,
-} from "expo-router";
-import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import '../global.css';
 
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { usePinAutoLock } from "@/hooks/use-pin-auto-lock";
-import { useAuthStore } from "@/store/authStore";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SplashScreen, Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { useAuthStore } from '@/store/authStore';
+
+SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 30_000,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const { hydrate, user, tokens, isPinSet, isPinVerified, isLoading } =
-    useAuthStore();
+  const hydrate = useAuthStore((s) => s.hydrate);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    hydrate().finally(() => SplashScreen.hideAsync());
+  }, []);
 
-  usePinAutoLock();
-
-  // Block render until SecureStore hydration completes (avoids flash)
   if (isLoading) return null;
 
-  const isAuthenticated = Boolean(user && tokens);
-  const needsPinUnlock = isAuthenticated && isPinSet && !isPinVerified;
-  const needsPinSetup =
-    isAuthenticated && !isPinSet && user?.status === "active";
-  const isPending = isAuthenticated && user?.status === "pending";
-  const canEnterApp =
-    isAuthenticated &&
-    (!isPinSet || isPinVerified) &&
-    user?.status === "active";
-
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <ErrorBoundary>
-        <Slot />
-      </ErrorBoundary>
-      {/* {!isAuthenticated && <Redirect href="/(auth)/login" />}
-      {needsPinUnlock && <Redirect href="/(auth)/pin-unlock" />}
-      {needsPinSetup && <Redirect href="/(auth)/pin-setup" />}
-      {isPending && <Redirect href="/(auth)/pending-approval" />}
-      {canEnterApp && <Redirect href="/(app)/dashboard" />} */}
-
-      {!isAuthenticated && <Redirect href="/(auth)/login" />}
-      {needsPinUnlock && <Redirect href="/(auth)/pin-unlock" />}
-      {needsPinSetup && <Redirect href="/(auth)/pin-setup" />}
-      {isPending && <Redirect href="/(auth)/pending-approval" />}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" options={{ animation: 'none' }} />
+          <Stack.Screen name="(app)" options={{ animation: 'none' }} />
+        </Stack>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

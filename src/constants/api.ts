@@ -1,41 +1,66 @@
-// Base URL is loaded from environment; fallback points to local dev server
 export const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_BASE_URL as string | undefined) ?? "";
+  (process.env.EXPO_PUBLIC_API_BASE_URL as string | undefined) ?? '';
+
+export const ESTATE_NAME =
+  (process.env.EXPO_PUBLIC_ESTATE_NAME as string | undefined) ?? 'Your Estate';
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export const AUTH_ENDPOINTS = {
-  REGISTER: "/auth/register",
-  LOGIN: "/auth/login",
-  LOGOUT: "/auth/logout",
-  REFRESH: "/auth/refresh",
-  ME: "/auth/me",
-  CHECK_STATUS: "/auth/status",
+  OTP_SEND:       '/auth/otp/send',
+  OTP_VERIFY:     '/auth/otp/verify',
+  REGISTER_PHONE: '/auth/register/phone',
+  LOGIN_PHONE:    '/auth/login/phone',
+  PIN_RESET:      '/auth/pin/reset',
+  LOGOUT:         '/auth/logout',
+  REFRESH:        '/auth/refresh',
+  ME:             '/auth/me',
+} as const;
+
+// ─── Estate ───────────────────────────────────────────────────────────────────
+export const ESTATE_ENDPOINTS = {
+  VERIFY_PIN: '/estates/verify-pin',
+  INFO:       '/estates/info',
+  STREETS:    '/estates/streets',
 } as const;
 
 // ─── Visits ───────────────────────────────────────────────────────────────────
 export const VISIT_ENDPOINTS = {
-  BASE: "/visits",
-  BY_ID: (id: string) => `/visits/${id}`,
-  VERIFY_QR: "/visits/verify-qr",
-  MY_VISITS: "/visits/my",
+  BASE:         '/visits',
+  MY_VISITS:    '/visits/my',
+  STATS_TODAY:  '/visits/stats/today',
+  VERIFY_CODE:  '/visits/verify-code',
+  BY_ID:        (id: string) => `/visits/${id}`,
+  REVOKE:       (id: string) => `/visits/${id}/revoke`,
+  VERIFY_QR:    '/visits/verify-qr',
+} as const;
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+export const NOTIFICATION_ENDPOINTS = {
+  BASE:         '/notifications',
+  UNREAD_COUNT: '/notifications/unread-count',
+  MARK_READ:    (id: string) => `/notifications/${id}/read`,
 } as const;
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const USER_ENDPOINTS = {
-  BASE: "/users",
-  BY_ID: (id: string) => `/users/${id}`,
-  PROFILE: "/users/profile",
+  ME:                   '/users/me',
+  NOTIFICATION_PREFS:   '/users/me/notification-preferences',
 } as const;
 
-// ─── Storage Keys ─────────────────────────────────────────────────────────────
+// ─── Concerns ─────────────────────────────────────────────────────────────────
+export const CONCERN_ENDPOINTS = {
+  BASE: '/concerns',
+} as const;
+
+// ─── Storage keys ─────────────────────────────────────────────────────────────
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: "esms_access_token",
-  REFRESH_TOKEN: "esms_refresh_token",
-  TOKEN_EXPIRY: "esms_token_expiry",
-  USER: "esms_user",
-  PIN_HASH: "esms_pin_hash",
+  ACCESS_TOKEN:  'ventry_access_token',
+  REFRESH_TOKEN: 'ventry_refresh_token',
+  TOKEN_EXPIRY:  'ventry_token_expiry',
+  USER:          'ventry_user',
+  PIN_HASH:      'ventry_pin_hash',
+  OTP_TOKEN:     'ventry_otp_token',
+  ESTATE_PIN_VERIFIED: 'ventry_estate_pin_verified',
 } as const;
 
-// ─── Misc ─────────────────────────────────────────────────────────────────────
 export const REQUEST_TIMEOUT_MS = 15_000;
-export const QR_EXPIRY_BUFFER_MS = 30_000; // show warning 30 s before QR expires

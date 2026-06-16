@@ -2,10 +2,16 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 
-import { getMe, getStoredUser, login, logout, register } from '@/api/auth';
-import { getStoredTokens } from '@/api/client';
+import { clearTokens, getStoredTokens } from '@/api/client';
+import {
+  getMe,
+  getStoredUser,
+  loginWithPhone,
+  logout,
+  registerWithPhone,
+} from '@/api/auth';
 import { STORAGE_KEYS } from '@/constants/api';
-import type { AuthState, LoginPayload, RegisterPayload, User } from '@/types';
+import type { AuthState, RegisterPhonePayload, User } from '@/types';
 
 // ─── PIN helpers ──────────────────────────────────────────────────────────────
 
@@ -13,23 +19,16 @@ async function hashPin(pin: string): Promise<string> {
   return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, pin);
 }
 
-// ─── Store ───────────────────────────────────────────────────────────────────
+// ─── Store ────────────────────────────────────────────────────────────────────
 
 interface AuthActions {
-  // Lifecycle
   hydrate: () => Promise<void>;
-
-  // Auth flows
-  registerUser: (payload: RegisterPayload) => Promise<void>;
-  loginUser: (payload: LoginPayload) => Promise<void>;
+  registerUser: (payload: RegisterPhonePayload, otpToken: string) => Promise<void>;
+  loginUser: (otpToken: string) => Promise<void>;
   logoutUser: () => Promise<void>;
-
-  // PIN
   setupPin: (pin: string) => Promise<void>;
   verifyPin: (pin: string) => Promise<boolean>;
   clearPinVerified: () => void;
-
-  // Misc
   refreshProfile: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User) => void;
@@ -47,8 +46,6 @@ const initialState: AuthState = {
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   ...initialState,
 
-  // ─── Hydrate on app launch ──────────────────────────────────────────────────
-
   hydrate: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -57,7 +54,6 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         getStoredTokens(),
         SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH),
       ]);
-
       set({
         user,
         tokens,
@@ -65,24 +61,20 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         isPinVerified: false,
         isLoading: false,
       });
-
-      // Silently refresh profile if we have a valid token
       if (user && tokens) {
-        get().refreshProfile().catch(() => {
-          // Non-fatal; user will see stale data
-        });
+        get()
+          .refreshProfile()
+          .catch(() => {});
       }
     } catch {
       set({ isLoading: false });
     }
   },
 
-  // ─── Register ───────────────────────────────────────────────────────────────
-
-  registerUser: async (payload) => {
+  registerUser: async (payload, otpToken) => {
     set({ isLoading: true, error: null });
     try {
-      const { user, tokens } = await register(payload);
+      const { user, tokens } = await registerWithPhone(payload, otpToken);
       set({ user, tokens, isLoading: false });
     } catch (err) {
       const message = (err as { message?: string }).message ?? 'Registration failed.';
@@ -91,12 +83,10 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     }
   },
 
-  // ─── Login ───────────────────────────────────────────────────────────────────
-
-  loginUser: async (payload) => {
+  loginUser: async (otpToken) => {
     set({ isLoading: true, error: null });
     try {
-      const { user, tokens } = await login(payload);
+      const { user, tokens } = await loginWithPhone(otpToken);
       const pinHash = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
       set({ user, tokens, isPinSet: Boolean(pinHash), isLoading: false });
     } catch (err) {
@@ -106,28 +96,20 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     }
   },
 
-  // ─── Logout ──────────────────────────────────────────────────────────────────
-
   logoutUser: async () => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       await logout();
-      // Keep PIN hash so user can set it up again next login
-      set({ ...initialState });
-    } catch {
-      set({ ...initialState });
-    }
+    } catch {}
+    await clearTokens();
+    set({ ...initialState });
   },
-
-  // ─── PIN Setup ───────────────────────────────────────────────────────────────
 
   setupPin: async (pin) => {
     const hash = await hashPin(pin);
     await SecureStore.setItemAsync(STORAGE_KEYS.PIN_HASH, hash);
     set({ isPinSet: true, isPinVerified: true });
   },
-
-  // ─── PIN Verify ──────────────────────────────────────────────────────────────
 
   verifyPin: async (pin) => {
     const stored = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
@@ -140,25 +122,17 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   clearPinVerified: () => set({ isPinVerified: false }),
 
-  // ─── Refresh profile ─────────────────────────────────────────────────────────
-
   refreshProfile: async () => {
     try {
       const user = await getMe();
       set({ user });
-    } catch {
-      // Swallow; caller can handle if needed
-    }
+    } catch {}
   },
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   clearError: () => set({ error: null }),
   setUser: (user) => set({ user }),
 }));
 
-// Convenience selectors
 export const selectUser = (s: AuthState & AuthActions) => s.user;
 export const selectIsAuthenticated = (s: AuthState & AuthActions) =>
   Boolean(s.user && s.tokens);
-export const selectUserRole = (s: AuthState & AuthActions) => s.user?.role ?? null;

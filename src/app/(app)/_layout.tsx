@@ -1,125 +1,114 @@
-import { Redirect, Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
-import type { SFSymbol } from 'sf-symbols-typescript';
+import { Tabs } from 'expo-router';
+import { Text, View } from 'react-native';
 
-import { useAuthStore } from '@/store/authStore';
-import { useTheme } from '@/hooks/use-theme';
+import { Bell, Home, PlusCircle, Settings, Users } from '@/components/ui/Icons';
+import { useUnreadCount } from '@/hooks/useQueries';
 
-function TabBarIcon({
-  iosName,
-  androidName,
-  color,
-}: {
-  iosName: SFSymbol;
-  androidName: string;
-  color: string | { toString(): string };
-}) {
+interface TabIconProps {
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  focused: boolean;
+  label: string;
+  badge?: number;
+}
+
+function TabIcon({ icon: Icon, focused, label, badge }: TabIconProps) {
+  const color = focused ? '#1B4FD8' : '#9CA3AF';
   return (
-    <SymbolView
-      name={{ ios: iosName, android: androidName as any, web: androidName as any }}
-      tintColor={String(color)}
-      size={24}
-    />
+    <View className="items-center pt-1 relative">
+      <View>
+        <Icon size={22} color={color} />
+        {badge && badge > 0 ? (
+          <View className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-danger items-center justify-center">
+            <Text className="text-white text-[9px] font-bold">
+              {badge > 9 ? '9+' : badge}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text
+        className={`text-[10px] mt-0.5 ${
+          focused ? 'text-primary-500 font-semibold' : 'text-muted'
+        }`}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
 
 export default function AppLayout() {
-  const { user, tokens, isPinSet, isPinVerified } = useAuthStore();
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const isAuthenticated = Boolean(user && tokens);
-
-  if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
-  if (isPinSet && !isPinVerified) return <Redirect href="/(auth)/pin-unlock" />;
-  if (user?.status === 'pending') return <Redirect href="/(auth)/pending-approval" />;
-
-  const isSecurityOrAdmin = user?.role === 'security' || user?.role === 'admin';
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#3C9FFE',
-        tabBarInactiveTintColor: String(theme.textSecondary),
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: String(theme.background),
-            borderTopColor: String(theme.backgroundElement),
-            paddingBottom: Platform.OS === 'ios' ? insets.bottom : 8,
-            height: Platform.OS === 'ios' ? 80 + insets.bottom : 64,
-          },
-        ],
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}>
+        tabBarStyle: {
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 4,
+          borderTopColor: '#E8E9EE',
+          backgroundColor: '#fff',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+        },
+        tabBarShowLabel: false,
+      }}
+    >
       <Tabs.Screen
-        name="dashboard/index"
+        name="home/index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon iosName="house.fill" androidName="home" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={Home} focused={focused} label="Home" />
           ),
         }}
       />
       <Tabs.Screen
-        name="visits/index"
+        name="visitors/index"
         options={{
-          title: 'Visits',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon iosName="person.2.fill" androidName="people" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={Users} focused={focused} label="Visitors" />
           ),
         }}
       />
       <Tabs.Screen
-        name="visits/create"
+        name="generate/index"
         options={{
-          title: 'Invite',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon iosName="plus.circle.fill" androidName="add_circle" color={color} />
-          ),
-          href: isSecurityOrAdmin ? null : '/(app)/visits/create',
-        }}
-      />
-      <Tabs.Screen
-        name="visits/[id]"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="scanner/index"
-        options={{
-          title: 'Scanner',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon iosName="qrcode.viewfinder" androidName="qr_code_scanner" color={color} />
-          ),
-          href: isSecurityOrAdmin ? '/(app)/scanner' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/index"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon iosName="person.circle.fill" androidName="account_circle" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={PlusCircle} focused={focused} label="Generate" />
           ),
         }}
       />
+      <Tabs.Screen
+        name="notifications/index"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              icon={Bell}
+              focused={focused}
+              label="Alerts"
+              badge={unreadCount}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings/index"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={Settings} focused={focused} label="Settings" />
+          ),
+        }}
+      />
+      {/* Hide settings sub-screens from tab bar */}
+      <Tabs.Screen name="settings/account" options={{ href: null }} />
+      <Tabs.Screen name="settings/security" options={{ href: null }} />
+      <Tabs.Screen name="settings/notification-settings" options={{ href: null }} />
+      <Tabs.Screen name="settings/legal" options={{ href: null }} />
+      <Tabs.Screen name="settings/report-concern" options={{ href: null }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-});

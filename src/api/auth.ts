@@ -1,15 +1,56 @@
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from 'expo-secure-store';
 
-import { AUTH_ENDPOINTS, STORAGE_KEYS } from "@/constants/api";
+import { apiClient, saveOtpToken, saveTokens } from './client';
+import { AUTH_ENDPOINTS, ESTATE_ENDPOINTS, STORAGE_KEYS } from '@/constants/api';
 import type {
   ApiResponse,
   AuthTokens,
-  LoginPayload,
-  RegisterPayload,
+  EstateInfo,
+  OtpVerifyResponse,
+  RegisterPhonePayload,
   User,
-  UserStatus,
-} from "@/types";
-import { apiClient, saveTokens } from "./client";
+} from '@/types';
+
+// ─── Estate PIN ───────────────────────────────────────────────────────────────
+
+export async function verifyEstatePin(pin: string): Promise<EstateInfo> {
+  const { data } = await apiClient.post<ApiResponse<EstateInfo>>(
+    ESTATE_ENDPOINTS.VERIFY_PIN,
+    { pin },
+  );
+  return data.data;
+}
+
+export async function getEstateInfo(): Promise<EstateInfo> {
+  const { data } = await apiClient.get<ApiResponse<EstateInfo>>(ESTATE_ENDPOINTS.INFO);
+  return data.data;
+}
+
+export async function getEstateStreets(): Promise<string[]> {
+  const { data } = await apiClient.get<ApiResponse<{ streets: string[] }>>(
+    ESTATE_ENDPOINTS.STREETS,
+  );
+  return data.data.streets;
+}
+
+// ─── OTP ──────────────────────────────────────────────────────────────────────
+
+export async function sendOtp(phone: string): Promise<void> {
+  await apiClient.post(AUTH_ENDPOINTS.OTP_SEND, { phone });
+}
+
+export async function verifyOtp(
+  phone: string,
+  otp: string,
+): Promise<OtpVerifyResponse> {
+  const { data } = await apiClient.post<ApiResponse<OtpVerifyResponse>>(
+    AUTH_ENDPOINTS.OTP_VERIFY,
+    { phone, otp },
+  );
+  // Persist the short-lived OTP token for the next step
+  await saveOtpToken(data.data.otpToken);
+  return data.data;
+}
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
@@ -18,18 +59,17 @@ export interface RegisterResponse {
   tokens: AuthTokens;
 }
 
-export async function register(
-  payload: RegisterPayload,
+export async function registerWithPhone(
+  payload: RegisterPhonePayload,
+  otpToken: string,
 ): Promise<RegisterResponse> {
   const { data } = await apiClient.post<ApiResponse<RegisterResponse>>(
-    AUTH_ENDPOINTS.REGISTER,
+    AUTH_ENDPOINTS.REGISTER_PHONE,
     payload,
+    { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(
-    STORAGE_KEYS.USER,
-    JSON.stringify(data.data.user),
-  );
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
   return data.data;
 }
 
@@ -40,16 +80,33 @@ export interface LoginResponse {
   tokens: AuthTokens;
 }
 
-export async function login(payload: LoginPayload): Promise<LoginResponse> {
+export async function loginWithPhone(otpToken: string): Promise<LoginResponse> {
   const { data } = await apiClient.post<ApiResponse<LoginResponse>>(
-    AUTH_ENDPOINTS.LOGIN,
-    payload,
+    AUTH_ENDPOINTS.LOGIN_PHONE,
+    {},
+    { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(
-    STORAGE_KEYS.USER,
-    JSON.stringify(data.data.user),
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+  return data.data;
+}
+
+// ─── PIN Reset ────────────────────────────────────────────────────────────────
+
+export interface PinResetResponse {
+  tokens: AuthTokens;
+}
+
+export async function resetPin(
+  phone: string,
+  resetCode: string,
+  newPin: string,
+): Promise<PinResetResponse> {
+  const { data } = await apiClient.post<ApiResponse<PinResetResponse>>(
+    AUTH_ENDPOINTS.PIN_RESET,
+    { phone, resetCode, newPin },
   );
+  await saveTokens(data.data.tokens);
   return data.data;
 }
 
@@ -59,41 +116,17 @@ export async function logout(): Promise<void> {
   try {
     await apiClient.post(AUTH_ENDPOINTS.LOGOUT);
   } catch {
-    // Best-effort; clear local data regardless
-  } finally {
-    await Promise.all([
-      SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.USER),
-    ]);
+    // best-effort
   }
-}
-
-// ─── Check Status ─────────────────────────────────────────────────────────────
-
-export interface CheckStatusResponse {
-  status: UserStatus;
-  user: User;
-}
-
-export async function checkStatus(): Promise<CheckStatusResponse> {
-  const { data } = await apiClient.get<ApiResponse<CheckStatusResponse>>(
-    AUTH_ENDPOINTS.CHECK_STATUS,
-  );
-  return data.data;
 }
 
 // ─── Get Me ───────────────────────────────────────────────────────────────────
 
 export async function getMe(): Promise<User> {
   const { data } = await apiClient.get<ApiResponse<User>>(AUTH_ENDPOINTS.ME);
-  // Keep local copy in sync
   await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data));
   return data.data;
 }
-
-// ─── Local user hydration ─────────────────────────────────────────────────────
 
 export async function getStoredUser(): Promise<User | null> {
   try {
