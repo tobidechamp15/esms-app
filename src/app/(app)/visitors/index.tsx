@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Copy, Search, X } from '@/components/ui/Icons';
+import { Copy, Search, Share, X } from '@/components/ui/Icons';
 import { usePastVisits, useRevokeVisit, useUpcomingVisits } from '@/hooks/useQueries';
 import type { Visit, VisitStatus } from '@/types';
 
@@ -113,10 +113,10 @@ function UpcomingCard({
           onPress={() => Clipboard.setStringAsync(visit.accessCode)}
           hitSlop={10}
         >
-          <Copy size={18} color="#6B7280" />
+          <Copy size={20} color="#6B7280" />
         </Pressable>
         <Pressable onPress={onShare} hitSlop={10}>
-          <Text className="text-muted text-base">↗</Text>
+          <Share size={20} color="#6B7280" />
         </Pressable>
       </View>
 

@@ -201,26 +201,19 @@ export function Share({
 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="18" cy="5" r="3" stroke={color} strokeWidth={strokeWidth} />
-      <Circle cx="6" cy="12" r="3" stroke={color} strokeWidth={strokeWidth} />
-      <Circle cx="18" cy="19" r="3" stroke={color} strokeWidth={strokeWidth} />
-      <Line
-        x1="8.59"
-        y1="13.51"
-        x2="15.42"
-        y2="17.49"
+      <Path
+        d="M3 11C3 11 3.5 9.5 5 9L18.5 4.2C19.8 3.7 21 5 20.5 6.3L15.5 19.5C15 21 13 21 12.5 19.5L10.5 13.5L4.5 11.5C3.5 11.2 3 11 3 11Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <Line
-        x1="15.41"
-        y1="6.51"
-        x2="8.59"
-        y2="10.49"
+      <Path
+        d="M10.5 13.5L20.5 4.2"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </Svg>
   );

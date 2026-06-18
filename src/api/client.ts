@@ -3,16 +3,16 @@ import axios, {
   AxiosInstance,
   AxiosResponse,
   InternalAxiosRequestConfig,
-} from 'axios';
-import * as SecureStore from 'expo-secure-store';
+} from "axios";
+import * as SecureStore from "expo-secure-store";
 
 import {
   API_BASE_URL,
   AUTH_ENDPOINTS,
   REQUEST_TIMEOUT_MS,
   STORAGE_KEYS,
-} from '@/constants/api';
-import type { ApiError, AuthTokens } from '@/types';
+} from "@/constants/api";
+import type { ApiError, AuthTokens } from "@/types";
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
@@ -34,7 +34,10 @@ export async function saveTokens(tokens: AuthTokens): Promise<void> {
   await Promise.all([
     SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken),
     SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken),
-    SecureStore.setItemAsync(STORAGE_KEYS.TOKEN_EXPIRY, String(tokens.expiresAt)),
+    SecureStore.setItemAsync(
+      STORAGE_KEYS.TOKEN_EXPIRY,
+      String(tokens.expiresAt),
+    ),
   ]);
 }
 
@@ -45,6 +48,7 @@ export async function clearTokens(): Promise<void> {
     SecureStore.deleteItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
     SecureStore.deleteItemAsync(STORAGE_KEYS.USER),
     SecureStore.deleteItemAsync(STORAGE_KEYS.OTP_TOKEN),
+    SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH), // ← add this
   ]);
 }
 
@@ -66,15 +70,17 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: REQUEST_TIMEOUT_MS,
   headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
 // ─── Request interceptor — attach access token ────────────────────────────────
 
 apiClient.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+  async (
+    config: InternalAxiosRequestConfig,
+  ): Promise<InternalAxiosRequestConfig> => {
     const tokens = await getStoredTokens();
     if (tokens?.accessToken) {
       config.headers.Authorization = `Bearer ${tokens.accessToken}`;
@@ -108,7 +114,7 @@ apiClient.interceptors.response.use(
     };
 
     const isAuthEndpoint =
-      originalRequest?.url?.includes('/auth/otp') ||
+      originalRequest?.url?.includes("/auth/otp") ||
       originalRequest?.url?.includes(AUTH_ENDPOINTS.REFRESH) ||
       originalRequest?.url?.includes(AUTH_ENDPOINTS.LOGIN_PHONE) ||
       originalRequest?.url?.includes(AUTH_ENDPOINTS.REGISTER_PHONE);
@@ -132,19 +138,19 @@ apiClient.interceptors.response.use(
 
       originalRequest._retry = true;
       isRefreshing = true;
-
       try {
         const tokens = await getStoredTokens();
-        if (!tokens?.refreshToken) throw new Error('No refresh token');
+        if (!tokens?.refreshToken) throw new Error("No refresh token");
 
-        const { data } = await axios.post<{ data: AuthTokens }>(
+        const { data } = await axios.post<{ data: { tokens: AuthTokens } }>(
           `${API_BASE_URL}${AUTH_ENDPOINTS.REFRESH}`,
           { refreshToken: tokens.refreshToken },
         );
 
-        await saveTokens(data.data);
-        flushQueue(null, data.data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        const newTokens = data.data.tokens; // ← unwrap the nested .tokens
+        await saveTokens(newTokens);
+        flushQueue(null, newTokens.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         flushQueue(refreshError, null);
@@ -159,10 +165,14 @@ apiClient.interceptors.response.use(
       message:
         (error.response?.data as Record<string, string> | undefined)?.message ??
         error.message ??
-        'An unexpected error occurred.',
+        "An unexpected error occurred.",
       code: (error.response?.data as Record<string, string> | undefined)?.code,
       statusCode: error.response?.status,
-      errors: (error.response?.data as Record<string, Record<string, string[]>> | undefined)?.errors,
+      errors: (
+        error.response?.data as
+          | Record<string, Record<string, string[]>>
+          | undefined
+      )?.errors,
     };
 
     return Promise.reject(apiError);

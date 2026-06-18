@@ -1,7 +1,7 @@
 // ─── User ─────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'resident' | 'security' | 'admin';
-export type UserStatus = 'active' | 'suspended' | 'deleted';
+export type UserRole = "resident" | "security" | "admin";
+export type UserStatus = "active" | "suspended" | "deleted";
 
 export interface User {
   id: string;
@@ -32,20 +32,20 @@ export interface EstateInfo {
 // ─── Visit / Access Code ──────────────────────────────────────────────────────
 
 export type VisitStatus =
-  | 'scheduled'
-  | 'checked_in'
-  | 'checked_out'
-  | 'cancelled'
-  | 'expired'
-  | 'revoked';
+  | "scheduled"
+  | "checked_in"
+  | "checked_out"
+  | "cancelled"
+  | "expired"
+  | "revoked";
 
 export interface Visit {
   id: string;
   residentId: string;
   visitorName: string;
-  visitDate: string;          // YYYY-MM-DD
+  visitDate: string; // YYYY-MM-DD
   expectedArrivalTime: string; // HH:MM
-  accessCode: string;          // 5-digit numeric
+  accessCode: string; // 5-digit numeric
   qrCodeData: string;
   status: VisitStatus;
   scheduledAt: string;
@@ -99,7 +99,10 @@ export interface RegisterPhonePayload {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-export type NotificationType = 'security_notice' | 'estate_update' | 'visitor_alert';
+export type NotificationType =
+  | "security_notice"
+  | "estate_update"
+  | "visitor_alert";
 
 export interface AppNotification {
   id: string;
@@ -123,7 +126,7 @@ export interface Concern {
   subject: string;
   address: string;
   attachmentUrl?: string | null;
-  status: 'submitted' | 'under_review' | 'resolved';
+  status: "submitted" | "under_review" | "resolved";
   submittedAt: string;
 }
 

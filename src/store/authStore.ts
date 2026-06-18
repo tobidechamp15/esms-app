@@ -1,17 +1,17 @@
-import * as Crypto from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
-import { create } from 'zustand';
+import * as Crypto from "expo-crypto";
+import * as SecureStore from "expo-secure-store";
+import { create } from "zustand";
 
-import { clearTokens, getStoredTokens } from '@/api/client';
+import { apiClient, clearTokens, getStoredTokens } from "@/api/client";
 import {
   getMe,
   getStoredUser,
   loginWithPhone,
   logout,
   registerWithPhone,
-} from '@/api/auth';
-import { STORAGE_KEYS } from '@/constants/api';
-import type { AuthState, RegisterPhonePayload, User } from '@/types';
+} from "@/api/auth";
+import { PIN_ENDPOINTS, STORAGE_KEYS } from "@/constants/api";
+import type { AuthState, RegisterPhonePayload, User } from "@/types";
 
 // ─── PIN helpers ──────────────────────────────────────────────────────────────
 
@@ -23,7 +23,10 @@ async function hashPin(pin: string): Promise<string> {
 
 interface AuthActions {
   hydrate: () => Promise<void>;
-  registerUser: (payload: RegisterPhonePayload, otpToken: string) => Promise<void>;
+  registerUser: (
+    payload: RegisterPhonePayload,
+    otpToken: string,
+  ) => Promise<void>;
   loginUser: (otpToken: string) => Promise<void>;
   logoutUser: () => Promise<void>;
   setupPin: (pin: string) => Promise<void>;
@@ -77,7 +80,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       const { user, tokens } = await registerWithPhone(payload, otpToken);
       set({ user, tokens, isLoading: false });
     } catch (err) {
-      const message = (err as { message?: string }).message ?? 'Registration failed.';
+      const message =
+        (err as { message?: string }).message ?? "Registration failed.";
       set({ isLoading: false, error: message });
       throw err;
     }
@@ -90,7 +94,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       const pinHash = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
       set({ user, tokens, isPinSet: Boolean(pinHash), isLoading: false });
     } catch (err) {
-      const message = (err as { message?: string }).message ?? 'Login failed.';
+      const message = (err as { message?: string }).message ?? "Login failed.";
       set({ isLoading: false, error: message });
       throw err;
     }
@@ -108,6 +112,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   setupPin: async (pin) => {
     const hash = await hashPin(pin);
     await SecureStore.setItemAsync(STORAGE_KEYS.PIN_HASH, hash);
+    try {
+      await apiClient.post(PIN_ENDPOINTS.SET, { pin });
+    } catch {
+      // Non-fatal — device-side PIN still works even if backend call fails
+    }
     set({ isPinSet: true, isPinVerified: true });
   },
 
@@ -128,7 +137,9 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       set({ user });
     } catch {}
   },
-
+  resetEstatePin: async () => {
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.ESTATE_PIN_VERIFIED);
+  },
   clearError: () => set({ error: null }),
   setUser: (user) => set({ user }),
 }));

@@ -46,6 +46,10 @@ export const USER_ENDPOINTS = {
   ME:                   '/users/me',
   NOTIFICATION_PREFS:   '/users/me/notification-preferences',
 } as const;
+export const PIN_ENDPOINTS = {
+  SET:                   '/auth/pin/set',
+  RESET:   '/auth/pin/reset',
+} as const;
 
 // ─── Concerns ─────────────────────────────────────────────────────────────────
 export const CONCERN_ENDPOINTS = {

@@ -98,7 +98,7 @@ function VisitCard({
           <Copy size={20} color="#6B7280" />
         </Pressable>
         <Pressable onPress={onShare} hitSlop={10}>
-          <Text className="text-2xl">↗</Text>
+          <Share size={20} color="#6B7280" />
         </Pressable>
       </View>
 
@@ -294,7 +294,7 @@ export default function HomeScreen() {
               <Text className="text-primary-400">v</Text>entry
             </Text>
             <Text className="text-xl font-bold text-navy mb-1">
-              Create Visitor Entry
+              Create Visit or Entry
             </Text>
             <Text className="text-sm text-muted mb-4 leading-5">
               Generate a code or QR for your visitor to enter the estate.

@@ -137,12 +137,12 @@ interface BackHeaderProps {
   onBack?: () => void;
 }
 
-function ChevronLeftIcon() {
+function ChevronLeftIcon({ size = 20, color = '#0A1628' }: { size?: number; color?: string }) {
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M15 18l-6-6 6-6"
-        stroke="#0A1628"
+        d={`M15 18l-6-6 6-6`}
+        stroke={color}
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -154,16 +154,16 @@ function ChevronLeftIcon() {
 export function BackHeader({ title, onBack }: BackHeaderProps) {
   const router = useRouter();
   return (
-    <View className="flex-row items-center px-4 pt-3 pb-3 border-b border-border bg-white">
+    <View className="flex-row items-center px-4 pt-4 pb-4 border-b border-border bg-white">
       <Pressable
         onPress={onBack ?? (() => router.back())}
         className="p-2 -ml-2 mr-2"
         hitSlop={12}
       >
-        <ChevronLeftIcon />
+        <ChevronLeftIcon size={20} color="#000" />
       </Pressable>
       {title ? (
-        <Text className="flex-1 text-center text-base font-semibold text-navy mr-8">
+        <Text className="flex-1 text-center text-lg font-semibold text-navy mr-8">
           {title}
         </Text>
       ) : null}

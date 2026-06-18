@@ -1,7 +1,11 @@
-import * as SecureStore from 'expo-secure-store';
-
-import { apiClient, saveOtpToken, saveTokens } from './client';
-import { AUTH_ENDPOINTS, ESTATE_ENDPOINTS, STORAGE_KEYS } from '@/constants/api';
+import * as SecureStore from "expo-secure-store";
+import * as Notifications from "expo-notifications";
+import { apiClient, getStoredTokens, saveOtpToken, saveTokens } from "./client";
+import {
+  AUTH_ENDPOINTS,
+  ESTATE_ENDPOINTS,
+  STORAGE_KEYS,
+} from "@/constants/api";
 import type {
   ApiResponse,
   AuthTokens,
@@ -9,7 +13,7 @@ import type {
   OtpVerifyResponse,
   RegisterPhonePayload,
   User,
-} from '@/types';
+} from "@/types";
 
 // ─── Estate PIN ───────────────────────────────────────────────────────────────
 
@@ -22,7 +26,9 @@ export async function verifyEstatePin(pin: string): Promise<EstateInfo> {
 }
 
 export async function getEstateInfo(): Promise<EstateInfo> {
-  const { data } = await apiClient.get<ApiResponse<EstateInfo>>(ESTATE_ENDPOINTS.INFO);
+  const { data } = await apiClient.get<ApiResponse<EstateInfo>>(
+    ESTATE_ENDPOINTS.INFO,
+  );
   return data.data;
 }
 
@@ -69,7 +75,10 @@ export async function registerWithPhone(
     { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+  await SecureStore.setItemAsync(
+    STORAGE_KEYS.USER,
+    JSON.stringify(data.data.user),
+  );
   return data.data;
 }
 
@@ -87,7 +96,10 @@ export async function loginWithPhone(otpToken: string): Promise<LoginResponse> {
     { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+  await SecureStore.setItemAsync(
+    STORAGE_KEYS.USER,
+    JSON.stringify(data.data.user),
+  );
   return data.data;
 }
 
@@ -114,7 +126,10 @@ export async function resetPin(
 
 export async function logout(): Promise<void> {
   try {
-    await apiClient.post(AUTH_ENDPOINTS.LOGOUT);
+    const tokens = await getStoredTokens();
+    await apiClient.post(AUTH_ENDPOINTS.LOGOUT, {
+      refreshToken: tokens?.refreshToken,
+    });
   } catch {
     // best-effort
   }

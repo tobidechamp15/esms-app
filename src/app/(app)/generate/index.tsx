@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   Text,
   TextInput,
   View,
@@ -78,10 +79,10 @@ function AccessCodeModal({
 }) {
   const [showQr, setShowQr] = useState(false);
 
-  function handleShare() {
-    Sharing.shareAsync(
-      `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateDisplay(visitDate)}\nArrival: ${formatTimeDisplay(arrivalTime)}\n\nValid for 3 hours from arrival time.`,
-    );
+  async function handleShare() {
+    await Share.share({
+      message: `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateDisplay(visitDate)}\nArrival: ${formatTimeDisplay(arrivalTime)}\n\nValid for 3 hours from arrival time.`,
+    });
   }
 
   return (

@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
             </Text>
 
             <Text className="text-2xl font-bold text-white mb-3">
-              Welcome to {ESTATE_NAME}
+              Welcome tjo {ESTATE_NAME}
             </Text>
 
             <Text className="text-base text-white leading-6">
