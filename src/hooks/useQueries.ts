@@ -22,6 +22,18 @@ import {
   updateProfile,
 } from '@/api/users';
 import type { CreateVisitPayload } from '@/types';
+import {
+  generateActivationCode,
+  generateResetCode,
+  updateAccountStatus,
+  transferAdmin,
+  getActivityLogs,
+  getAnnouncements,
+  createAnnouncement,
+  triggerPanic,
+  updateConcernStatus,
+  type AccountStatusAction,
+} from '@/api/security';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -168,5 +180,73 @@ export function useSubmitConcern() {
       address: string;
       attachment?: { uri: string; name: string; type: string };
     }) => submitConcern(subject, address, attachment),
+  });
+}
+
+// ─── Security Hooks ───────────────────────────────────────────────────────────
+
+export function useActivityLogs(userId?: string) {
+  return useQuery({
+    queryKey: ['activity-logs', userId ?? 'all'],
+    queryFn: () => getActivityLogs({ userId }),
+    staleTime: 30_000,
+  });
+}
+
+export function useAnnouncements(page = 1) {
+  return useQuery({
+    queryKey: ['announcements', page],
+    queryFn: () => getAnnouncements(page),
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateAnnouncement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createAnnouncement,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+}
+
+export function useGenerateResetCode() {
+  return useMutation({ mutationFn: (userId: string) => generateResetCode(userId) });
+}
+
+export function useGenerateActivationCode() {
+  return useMutation({ mutationFn: generateActivationCode });
+}
+
+export function useUpdateAccountStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, action, pin }: { userId: string; action: AccountStatusAction; pin: string }) =>
+      updateAccountStatus(userId, action, pin),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['directory'] }),
+  });
+}
+
+export function useTransferAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ targetUserId, pin }: { targetUserId: string; pin: string }) =>
+      transferAdmin(targetUserId, pin),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['directory'] }),
+  });
+}
+
+export function usePanic() {
+  return useMutation({ mutationFn: triggerPanic });
+}
+
+export function useUpdateConcernStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'submitted' | 'under_review' | 'resolved' }) =>
+      updateConcernStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['concerns'] }),
   });
 }

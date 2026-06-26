@@ -14,7 +14,34 @@ export const AUTH_ENDPOINTS = {
   LOGOUT:         '/auth/logout',
   REFRESH:        '/auth/refresh',
   ME:             '/auth/me',
+  ACTIVATE:       '/auth/activate',
 } as const;
+
+// ─── Security (management) ────────────────────────────────────────────────────
+export const SECURITY_ENDPOINTS = {
+  ACTIVATION_CODE: '/security/activation-code',
+  RESET_CODE:      (id: string) => `/security/users/${id}/reset-code`,
+  ACCOUNT_STATUS:  (id: string) => `/security/users/${id}/status`,
+  TRANSFER_ADMIN:  '/security/admin/transfer',
+} as const;
+
+export const ACTIVITY_ENDPOINTS = {
+  BASE: '/activity-logs',
+} as const;
+
+export const ANNOUNCEMENT_ENDPOINTS = {
+  BASE: '/announcements',
+} as const;
+
+export const PANIC_ENDPOINTS = {
+  BASE: '/panic',
+} as const;
+
+// List users (existing admin route) + concern status
+export const ADMIN_USER_ENDPOINTS = {
+  LIST: '/admin/users',
+} as const;
+export const CONCERN_STATUS_ENDPOINT = (id: string) => `/concerns/${id}/status`;
 
 // ─── Estate ───────────────────────────────────────────────────────────────────
 export const ESTATE_ENDPOINTS = {

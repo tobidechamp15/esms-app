@@ -1,8 +1,9 @@
 import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
 
-import { Bell, Home, PlusCircle, Settings, Users } from "@/components/ui/Icons";
+import { Bell, Home, PlusCircle, QrCode, Settings, Shield, Users } from "@/components/ui/Icons";
 import { useUnreadCount } from "@/hooks/useQueries";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 
 interface TabIconProps {
   icon: React.ComponentType<{ size?: number; color?: string }>;
@@ -44,6 +45,11 @@ function TabIcon({ icon: Icon, focused, label, badge }: TabIconProps) {
 
 export default function AppLayout() {
   const { data: unreadCount = 0 } = useUnreadCount();
+  const isSecurity = useAuthStore(selectIsSecurity);
+
+  // `href: null` removes a screen from the tab bar (route still exists).
+  const residentOnly = isSecurity ? null : undefined;
+  const securityOnly = isSecurity ? undefined : null;
 
   return (
     <Tabs
@@ -62,20 +68,31 @@ export default function AppLayout() {
           shadowOpacity: 0.09,
           shadowRadius: 9,
         },
-        tabBarItemStyle: {
-          paddingHorizontal: 2,
-        },
+        tabBarItemStyle: { paddingHorizontal: 2 },
         tabBarShowLabel: false,
       }}
     >
+      {/* ── Resident Home ───────────────────────────── */}
       <Tabs.Screen
         name="home/index"
         options={{
+          href: residentOnly === null ? null : undefined,
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={Home} focused={focused} label="Home" />
           ),
         }}
       />
+      {/* ── Security Home (Verify) ──────────────────── */}
+      <Tabs.Screen
+        name="verify/index"
+        options={{
+          href: securityOnly === null ? null : undefined,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={QrCode} focused={focused} label="Verify" />
+          ),
+        }}
+      />
+      {/* ── Visitors (shared) ───────────────────────── */}
       <Tabs.Screen
         name="visitors/index"
         options={{
@@ -84,27 +101,36 @@ export default function AppLayout() {
           ),
         }}
       />
+      {/* ── Resident Generate ───────────────────────── */}
       <Tabs.Screen
         name="generate/index"
         options={{
+          href: residentOnly === null ? null : undefined,
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={PlusCircle} focused={focused} label="Generate" />
           ),
         }}
       />
+      {/* ── Security Support ────────────────────────── */}
+      <Tabs.Screen
+        name="support/index"
+        options={{
+          href: securityOnly === null ? null : undefined,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={Shield} focused={focused} label="Support" />
+          ),
+        }}
+      />
+      {/* ── Notifications (shared) ──────────────────── */}
       <Tabs.Screen
         name="notifications/index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              icon={Bell}
-              focused={focused}
-              label="Alerts"
-              badge={unreadCount}
-            />
+            <TabIcon icon={Bell} focused={focused} label="Alerts" badge={unreadCount} />
           ),
         }}
       />
+      {/* ── Settings (shared) ───────────────────────── */}
       <Tabs.Screen
         name="settings"
         options={{
@@ -113,13 +139,15 @@ export default function AppLayout() {
           ),
         }}
       />
-      {/* Hide settings sub-screens from tab bar */}
+
+      {/* Hidden sub-screens */}
+      <Tabs.Screen name="verify/result" options={{ href: null }} />
+      <Tabs.Screen name="verify/scan" options={{ href: null }} />
+      <Tabs.Screen name="support/manage" options={{ href: null }} />
+      <Tabs.Screen name="support/generate-activation" options={{ href: null }} />
       <Tabs.Screen name="settings/account" options={{ href: null }} />
       <Tabs.Screen name="settings/security" options={{ href: null }} />
-      <Tabs.Screen
-        name="settings/notification-settings"
-        options={{ href: null }}
-      />
+      <Tabs.Screen name="settings/notification-settings" options={{ href: null }} />
       <Tabs.Screen name="settings/legal" options={{ href: null }} />
       <Tabs.Screen name="settings/report-concern" options={{ href: null }} />
     </Tabs>

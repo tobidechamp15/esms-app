@@ -1,7 +1,7 @@
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 export type UserRole = "resident" | "security" | "admin";
-export type UserStatus = "active" | "suspended" | "deleted";
+export type UserStatus = "pending" | "active" | "suspended" | "deleted";
 
 export interface User {
   id: string;
@@ -12,6 +12,7 @@ export interface User {
   streetName: string;
   role: UserRole;
   status: UserStatus;
+  isAdmin?: boolean;
   pushToken?: string | null;
   notificationPreferences?: {
     pushNotifications: boolean;

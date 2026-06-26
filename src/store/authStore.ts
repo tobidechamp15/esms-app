@@ -6,6 +6,7 @@ import { apiClient, clearTokens, getStoredTokens } from "@/api/client";
 import {
   getMe,
   getStoredUser,
+  activateAccount,
   loginWithPhone,
   logout,
   registerWithPhone,
@@ -28,6 +29,7 @@ interface AuthActions {
     otpToken: string,
   ) => Promise<void>;
   loginUser: (otpToken: string) => Promise<void>;
+  activateOfficer: (phone: string, code: string, pin: string) => Promise<void>;
   logoutUser: () => Promise<void>;
   setupPin: (pin: string) => Promise<void>;
   verifyPin: (pin: string) => Promise<boolean>;
@@ -100,6 +102,22 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     }
   },
 
+  activateOfficer: async (phone, code, pin) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { user, tokens } = await activateAccount(phone, code, pin);
+      // Mirror the new PIN into device SecureStore so the PIN lock works offline.
+      const hash = await hashPin(pin);
+      await SecureStore.setItemAsync(STORAGE_KEYS.PIN_HASH, hash);
+      set({ user, tokens, isPinSet: true, isPinVerified: true, isLoading: false });
+    } catch (err) {
+      const message =
+        (err as { message?: string }).message ?? "Activation failed.";
+      set({ isLoading: false, error: message });
+      throw err;
+    }
+  },
+
   logoutUser: async () => {
     set({ isLoading: true });
     try {
@@ -147,3 +165,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 export const selectUser = (s: AuthState & AuthActions) => s.user;
 export const selectIsAuthenticated = (s: AuthState & AuthActions) =>
   Boolean(s.user && s.tokens);
+export const selectIsSecurity = (s: AuthState & AuthActions) =>
+  s.user?.role === "security" || s.user?.role === "admin";
+export const selectIsAdmin = (s: AuthState & AuthActions) =>
+  s.user?.role === "admin" || Boolean(s.user?.isAdmin);

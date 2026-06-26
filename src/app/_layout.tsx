@@ -1,11 +1,12 @@
-import '../global.css';
+import "../global.css";
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SplashScreen, Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Notifications from 'expo-notifications';
-import { useAuthStore } from '@/store/authStore';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SplashScreen, Stack } from "expo-router";
+import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Notifications from "expo-notifications";
+import { useAuthStore } from "@/store/authStore";
+import { registerPushToken } from "@/lib/push";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,7 +35,12 @@ export default function RootLayout() {
   const isLoading = useAuthStore((s) => s.isLoading);
 
   useEffect(() => {
-    hydrate().finally(() => SplashScreen.hideAsync());
+    hydrate()
+      .then(() => {
+        // Refresh the device push token on launch if already signed in.
+        if (useAuthStore.getState().tokens) registerPushToken();
+      })
+      .finally(() => SplashScreen.hideAsync());
   }, []);
 
   if (isLoading) return null;
@@ -42,10 +48,10 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" options={{ animation: 'none' }} />
-          <Stack.Screen name="(app)" options={{ animation: 'none' }} />
+          <Stack.Screen name="(auth)" options={{ animation: "none" }} />
+          <Stack.Screen name="(app)" options={{ animation: "none" }} />
         </Stack>
       </GestureHandlerRootView>
     </QueryClientProvider>

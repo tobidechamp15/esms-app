@@ -142,6 +142,12 @@ export default function LoginScreen() {
             >
               Forgot PIN?
             </Text>
+            <Text
+              onPress={() => router.push("/(auth)/activate")}
+              className="text-center text-sm text-muted font-medium py-1"
+            >
+              New security officer? Activate account
+            </Text>
           </View>
         </KeyboardAvoidingView>
       )}

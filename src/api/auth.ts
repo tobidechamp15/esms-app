@@ -103,6 +103,30 @@ export async function loginWithPhone(otpToken: string): Promise<LoginResponse> {
   return data.data;
 }
 
+// ─── Activation (new security officer) ────────────────────────────────────────
+
+export interface ActivateResponse {
+  user: User;
+  tokens: AuthTokens;
+}
+
+export async function activateAccount(
+  phone: string,
+  code: string,
+  newPin: string,
+): Promise<ActivateResponse> {
+  const { data } = await apiClient.post<ApiResponse<ActivateResponse>>(
+    AUTH_ENDPOINTS.ACTIVATE,
+    { phone, code, newPin },
+  );
+  await saveTokens(data.data.tokens);
+  await SecureStore.setItemAsync(
+    STORAGE_KEYS.USER,
+    JSON.stringify(data.data.user),
+  );
+  return data.data;
+}
+
 // ─── PIN Reset ────────────────────────────────────────────────────────────────
 
 export interface PinResetResponse {

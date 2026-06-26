@@ -7,6 +7,7 @@ import { STORAGE_KEYS } from "@/constants/api";
 
 export default function Index() {
   const user = useAuthStore((s) => s.user);
+  const isSecurity = user?.role === "security" || user?.role === "admin";
   const tokens = useAuthStore((s) => s.tokens);
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const isPinVerified = useAuthStore((s) => s.isPinVerified);
@@ -39,6 +40,6 @@ export default function Index() {
     return <Redirect href="/(auth)/pin-lock" />;
   }
 
-  // 4. Fully authenticated
-  return <Redirect href="/(app)/home" />;
+  // 4. Fully authenticated — security lands on Verify, residents on Home
+  return <Redirect href={isSecurity ? "/(app)/verify" : "/(app)/home"} />;
 }

@@ -55,7 +55,7 @@ export async function getPastVisits(
       params: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
-        status: "expired,checked_out,revoked",
+        status: ['scheduled', 'checked_in', 'checked_out', 'cancelled', 'expired', 'revoked'],
         ...(params.search ? { search: params.search } : {}),
       },
     },

@@ -257,6 +257,11 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  useEffect(() => {
+    if (user?.role === "security") {
+      router.push("/(app)/verify");
+    }
+  }, [user]);
 
   const {
     data: todayVisits = [],
