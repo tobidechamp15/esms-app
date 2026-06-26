@@ -77,18 +77,16 @@ export const apiClient: AxiosInstance = axios.create({
 
 // ─── Request interceptor — attach access token ────────────────────────────────
 
-apiClient.interceptors.request.use(
-  async (
-    config: InternalAxiosRequestConfig,
-  ): Promise<InternalAxiosRequestConfig> => {
-    const tokens = await getStoredTokens();
-    if (tokens?.accessToken) {
-      config.headers.Authorization = `Bearer ${tokens.accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+apiClient.interceptors.request.use(async (config) => {
+  // Respect an explicitly-provided Authorization header (OTP token on login/register)
+  if (config.headers.Authorization) return config;
+
+  const tokens = await getStoredTokens();
+  if (tokens?.accessToken) {
+    config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+  }
+  return config;
+});
 
 // ─── Response interceptor — 401 / token refresh ───────────────────────────────
 

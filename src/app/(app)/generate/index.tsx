@@ -1,7 +1,7 @@
-import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useCallback, useState } from "react";
 import {
   Modal,
   Platform,
@@ -10,27 +10,29 @@ import {
   Share,
   Text,
   TextInput,
+  ToastAndroid,
   View,
-} from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import QRCode from "react-native-qrcode-svg";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Button } from '@/components/ui';
-import { Copy, QrCode, X } from '@/components/ui/Icons';
-import { useCreateVisit } from '@/hooks/useQueries';
-import type { Visit } from '@/types';
+import { Button } from "@/components/ui";
+import { Copy, QrCode, X } from "@/components/ui/Icons";
+import { useCreateVisit } from "@/hooks/useQueries";
+import type { Visit } from "@/types";
+import { notify } from "@/lib/notify";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDateDisplay(d: Date) {
-  return d.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 function formatTimeDisplay(d: Date) {
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -63,7 +65,20 @@ function DetailRow({
     </View>
   );
 }
+export function useToast() {
+  const [toast, setToast] = useState<string | null>(null);
 
+  const showToast = useCallback((message: string) => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      setToast(message);
+      setTimeout(() => setToast(null), 2000);
+    }
+  }, []);
+
+  return { toast, showToast };
+}
 // ─── Success Modal ────────────────────────────────────────────────────────────
 
 function AccessCodeModal({
@@ -84,13 +99,16 @@ function AccessCodeModal({
       message: `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateDisplay(visitDate)}\nArrival: ${formatTimeDisplay(arrivalTime)}\n\nValid for 3 hours from arrival time.`,
     });
   }
+  const { toast, showToast } = useToast();
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/40" onPress={onClose} />
       <View className="bg-white rounded-t-3xl px-6 pt-5 pb-10">
         <View className="flex-row justify-between items-center mb-1">
-          <Text className="text-xl font-bold text-navy">Access Code Created</Text>
+          <Text className="text-xl font-bold text-navy">
+            Access Code Created
+          </Text>
           <Pressable onPress={onClose} hitSlop={12}>
             <X size={20} color="#0A1628" />
           </Pressable>
@@ -122,7 +140,9 @@ function AccessCodeModal({
 
         {/* Visit Details */}
         <View className="bg-surface border border-border rounded-2xl p-4 mb-5">
-          <Text className="text-sm font-bold text-navy mb-1">Visit Details</Text>
+          <Text className="text-sm font-bold text-navy mb-1">
+            Visit Details
+          </Text>
           <DetailRow label="Visitor Name" value={visit.visitorName} />
           <DetailRow label="Visit Date" value={formatDateDisplay(visitDate)} />
           <DetailRow
@@ -135,7 +155,10 @@ function AccessCodeModal({
         {/* Actions */}
         <View className="flex-row gap-3 mb-3">
           <Pressable
-            onPress={() => Clipboard.setStringAsync(visit.accessCode)}
+            onPress={async () => {
+              await Clipboard.setStringAsync(visit.accessCode);
+              showToast("Access code copied!");
+            }}
             className="flex-1 h-12 border border-border rounded-2xl flex-row items-center justify-center gap-2"
           >
             <Copy size={16} color="#0A1628" />
@@ -147,20 +170,38 @@ function AccessCodeModal({
           >
             <QrCode size={16} color="#0A1628" />
             <Text className="text-sm font-medium text-navy">
-              {showQr ? 'Hide QR' : 'Generate QR'}
+              {showQr ? "Hide QR" : "Generate QR"}
             </Text>
           </Pressable>
         </View>
 
         <Pressable
           onPress={handleShare}
-          className="h-14 bg-primary-500 rounded-2xl items-center justify-center"
+          className="h-14 bg-[#084BA3] rounded-2xl items-center justify-center"
         >
           <Text className="text-white font-semibold text-base">
             Share Access Code
           </Text>
         </Pressable>
       </View>
+      {toast && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 100,
+            alignSelf: "center",
+            backgroundColor: "rgba(10,22,40,0.9)",
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 20,
+            zIndex: 999,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            {toast}
+          </Text>
+        </View>
+      )}
     </Modal>
   );
 }
@@ -170,7 +211,7 @@ function AccessCodeModal({
 export default function GenerateScreen() {
   const createVisit = useCreateVisit();
 
-  const [visitorName, setVisitorName] = useState('');
+  const [visitorName, setVisitorName] = useState("");
   const [visitDate, setVisitDate] = useState(new Date());
   const [arrivalTime, setArrivalTime] = useState(() => {
     const d = new Date();
@@ -180,23 +221,28 @@ export default function GenerateScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [createdVisit, setCreatedVisit] = useState<Visit | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const isValid = visitorName.trim().length > 0;
 
   async function handleGenerate() {
     if (!isValid) return;
-    setError('');
+    setError("");
     try {
       const visit = await createVisit.mutateAsync({
         visitorName: visitorName.trim(),
         visitDate: toDateString(visitDate),
         expectedArrivalTime: toTimeString(arrivalTime),
       });
+
       setCreatedVisit(visit);
+      await notify(
+        "Visitor code generated",
+        `Code for ${visit.visitorName} is ready. Valid for ${toDateString(visitDate)}.`,
+      );
     } catch (err) {
       setError(
-        (err as { message?: string }).message ?? 'Failed to generate code.',
+        (err as { message?: string }).message ?? "Failed to generate code.",
       );
     }
   }
@@ -223,7 +269,7 @@ export default function GenerateScreen() {
           value={visitorName}
           onChangeText={(t) => {
             setVisitorName(t);
-            setError('');
+            setError("");
           }}
           placeholder="Enter visitor's full name"
           placeholderTextColor="#9CA3AF"
@@ -248,7 +294,7 @@ export default function GenerateScreen() {
             value={visitDate}
             mode="date"
             minimumDate={new Date()}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={(_, d) => {
               setShowDatePicker(false);
               if (d) setVisitDate(d);
@@ -274,7 +320,7 @@ export default function GenerateScreen() {
           <DateTimePicker
             value={arrivalTime}
             mode="time"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={(_, t) => {
               setShowTimePicker(false);
               if (t) setArrivalTime(t);
@@ -286,9 +332,8 @@ export default function GenerateScreen() {
         <View className="bg-white border border-border rounded-2xl p-4 mb-4">
           <Text className="text-sm text-muted leading-5">
             The access code can be shared with your visitor and will remain
-            valid for{' '}
-            <Text className="font-bold text-navy">3 hours</Text> from the
-            selected arrival time.
+            valid for <Text className="font-bold text-navy">3 hours</Text> from
+            the selected arrival time.
           </Text>
         </View>
 
@@ -314,7 +359,7 @@ export default function GenerateScreen() {
           arrivalTime={arrivalTime}
           onClose={() => {
             setCreatedVisit(null);
-            setVisitorName('');
+            setVisitorName("");
           }}
         />
       )}

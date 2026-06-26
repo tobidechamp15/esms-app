@@ -1,43 +1,55 @@
-import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
+  ImageBackground,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   Text,
+  ToastAndroid,
   View,
-} from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import QRCode from "react-native-qrcode-svg";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Clock, Copy, Share, X } from '@/components/ui/Icons';
-import { useRevokeVisit, useTodayStats, useTodayVisits } from '@/hooks/useQueries';
-import { useAuthStore } from '@/store/authStore';
-import type { Visit } from '@/types';
+import { Clock, Copy, ShareIcon, X } from "@/components/ui/Icons";
+import {
+  useRevokeVisit,
+  useTodayStats,
+  useTodayVisits,
+} from "@/hooks/useQueries";
+import { useAuthStore } from "@/store/authStore";
+import type { Visit } from "@/types";
+import { LinearGradient } from "expo-linear-gradient";
+import { useToast } from "../generate";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDateShort(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
 function countdownLabel(expiresAt: string): { label: string; urgent: boolean } {
   const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return { label: 'Expired', urgent: true };
+  if (diff <= 0) return { label: "Expired", urgent: true };
   const totalSecs = Math.floor(diff / 1000);
   const mins = Math.floor(totalSecs / 60);
   const secs = totalSecs % 60;
   const hrs = Math.floor(mins / 60);
   if (hrs > 0) return { label: `${hrs}h ${mins % 60}m`, urgent: false };
   return {
-    label: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+    label: `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`,
     urgent: mins < 15,
   };
 }
@@ -54,6 +66,7 @@ function VisitCard({
   onShare: () => void;
 }) {
   const { label, urgent } = countdownLabel(visit.expiresAt);
+  const { toast, showToast } = useToast();
 
   return (
     <View className="border-b border-border pb-4 mb-4">
@@ -64,14 +77,14 @@ function VisitCard({
         <View
           className={`flex-row items-center gap-1 px-2 py-1 rounded-full border ${
             urgent
-              ? 'border-warning/40 bg-warning/10'
-              : 'border-success/40 bg-success/10'
+              ? "border-warning/40 bg-warning/10"
+              : "border-success/40 bg-success/10"
           }`}
         >
-          <Clock size={11} color={urgent ? '#D97706' : '#16A34A'} />
+          <Clock size={11} color={urgent ? "#D97706" : "#16A34A"} />
           <Text
             className={`text-[11px] font-medium ${
-              urgent ? 'text-warning' : 'text-success'
+              urgent ? "text-warning" : "text-success"
             }`}
           >
             Code expires in {label}
@@ -86,19 +99,22 @@ function VisitCard({
         Expected Arrival: {visit.expectedArrivalTime}
       </Text>
       <Text className="text-sm text-muted">
-        Access Code:{' '}
+        Access Code:{" "}
         <Text className="font-bold text-navy">{visit.accessCode}</Text>
       </Text>
 
       <View className="flex-row items-center gap-4 mt-3">
         <Pressable
-          onPress={() => Clipboard.setStringAsync(visit.accessCode)}
+          onPress={async () => {
+            await Clipboard.setStringAsync(visit.accessCode);
+            showToast("Access code copied!");
+          }}
           hitSlop={10}
         >
           <Copy size={20} color="#6B7280" />
         </Pressable>
         <Pressable onPress={onShare} hitSlop={10}>
-          <Share size={20} color="#6B7280" />
+          <ShareIcon size={20} color="#6B7280" />
         </Pressable>
       </View>
 
@@ -108,6 +124,24 @@ function VisitCard({
       >
         <Text className="text-danger text-sm font-semibold">Remove Access</Text>
       </Pressable>
+      {toast && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 100,
+            alignSelf: "center",
+            backgroundColor: "rgba(10,22,40,0.9)",
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 20,
+            zIndex: 999,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            {toast}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -140,7 +174,7 @@ function RemoveAccessModal({
       <View className="bg-white rounded-t-3xl px-6 pt-5 pb-10">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-xl font-bold text-navy">
-            {didRemove ? 'Access Removed' : 'Remove Access'}
+            {didRemove ? "Access Removed" : "Remove Access"}
           </Text>
           <Pressable onPress={onClose} hitSlop={12}>
             <X size={20} color="#0A1628" />
@@ -183,8 +217,14 @@ function RemoveAccessModal({
                   Visit Details
                 </Text>
                 <Row label="Visitor Name" value={visit.visitorName} />
-                <Row label="Visit Date" value={formatDateShort(visit.visitDate)} />
-                <Row label="Expected Arrival" value={visit.expectedArrivalTime} />
+                <Row
+                  label="Visit Date"
+                  value={formatDateShort(visit.visitDate)}
+                />
+                <Row
+                  label="Expected Arrival"
+                  value={visit.expectedArrivalTime}
+                />
               </View>
             )}
             <Pressable
@@ -193,7 +233,7 @@ function RemoveAccessModal({
               className="h-14 bg-danger rounded-2xl items-center justify-center"
             >
               <Text className="text-white font-semibold">
-                {isPending ? 'Removing...' : 'Remove Access'}
+                {isPending ? "Removing..." : "Remove Access"}
               </Text>
             </Pressable>
           </>
@@ -222,6 +262,8 @@ export default function HomeScreen() {
     data: todayVisits = [],
     refetch,
     isRefetching,
+    isError,
+    error,
   } = useTodayVisits();
   const { data: stats } = useTodayStats();
   const revokeVisit = useRevokeVisit();
@@ -231,7 +273,7 @@ export default function HomeScreen() {
   const [didRemove, setDidRemove] = useState(false);
 
   const hour = new Date().getHours();
-  const emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
+  const emoji = hour < 12 ? "☀️" : hour < 18 ? "🌤️" : "🌙";
 
   function openRemoveModal(visit: Visit) {
     setSelectedVisit(visit);
@@ -245,12 +287,15 @@ export default function HomeScreen() {
     setDidRemove(true);
   }
 
-  function handleShare(visit: Visit) {
-    Sharing.shareAsync(
-      `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateShort(visit.visitDate)}\nArrival: ${visit.expectedArrivalTime}\n\nValid for 3 hours from arrival time.`,
-    );
+  async function handleShare(visit: Visit) {
+    await Share.share({
+      message: `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateShort(visit.visitDate)}\nArrival: ${visit.expectedArrivalTime}\n\nValid for 3 hours from arrival time.`,
+    });
   }
-
+  const { showToast } = useToast();
+  useEffect(() => {
+    if (isError) showToast("Couldn't load visits");
+  }, [isError]);
   return (
     <SafeAreaView className="flex-1 bg-surface">
       <ScrollView
@@ -264,7 +309,9 @@ export default function HomeScreen() {
         <View className="px-6 pt-6">
           {/* ── Greeting ── */}
           <Text className="text-2xl font-bold text-navy">
-            Hello, {user?.firstName} {emoji}
+            Hello, {user?.firstName}{" "}
+            {user?.lastName ? `${user.lastName.charAt(0).toUpperCase()}.` : ""}{" "}
+            {emoji}
           </Text>
           <Text className="text-sm text-muted mt-0.5">
             No. {user?.houseNumber}, {user?.streetName}
@@ -289,41 +336,85 @@ export default function HomeScreen() {
           </View>
 
           {/* ── Generate CTA Banner ── */}
+          {/* <ImageBackground source={require("../../../../assets/phone.png")}> */}
           <View className="mt-5 bg-primary-50 rounded-3xl p-5 border border-primary-100">
-            <Text className="text-sm font-bold text-primary-500 mb-1">
-              <Text className="text-primary-400">v</Text>entry
-            </Text>
-            <Text className="text-xl font-bold text-navy mb-1">
-              Create Visit or Entry
-            </Text>
-            <Text className="text-sm text-muted mb-4 leading-5">
-              Generate a code or QR for your visitor to enter the estate.
-            </Text>
-            <Pressable
-              onPress={() => router.push('/(app)/generate')}
-              className="h-12 bg-primary-500 rounded-2xl items-center justify-center"
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 pr-4">
+                <Text className="text-sm font-bold text-primary-500 mb-1">
+                  <Text className="text-primary-400">v</Text>entry
+                </Text>
+
+                <Text className="text-2xl font-bold text-navy mb-2">
+                  Create Visitor Entry
+                </Text>
+
+                <Text className="text-base text-muted leading-6">
+                  Generate a code or QR for your visitor to enter the estate.
+                </Text>
+              </View>
+
+              <Image
+                source={require("../../../../assets/phone.png")}
+                resizeMode="contain"
+                className="w-28 h-28"
+              />
+            </View>
+
+            <LinearGradient
+              colors={["#FFFFFF", "rgba(255,255,255,0)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ borderRadius: 16, marginTop: 16 }}
             >
-              <Text className="text-white text-sm font-semibold">
-                Generate Access Code
-              </Text>
-            </Pressable>
+              <Pressable
+                onPress={() => router.push("/(app)/generate")}
+                className="h-14 bg-[#084BA3] rounded-2xl items-center justify-center "
+              >
+                <Text className="text-white text-base font-semibold">
+                  Generate Access Code
+                </Text>
+              </Pressable>
+            </LinearGradient>
           </View>
+          {/* </ImageBackground> */}
 
           {/* ── Today's Visitors header ── */}
           <View className="flex-row justify-between items-center mt-7 mb-4">
-            <Text className="text-lg font-bold text-navy">Today's Visitors</Text>
-            <Pressable onPress={() => router.push('/(app)/visitors')}>
+            <Text className="text-lg font-bold text-navy">
+              Today's Visitors
+            </Text>
+            <Pressable onPress={() => router.push("/(app)/visitors")}>
               <Text className="text-sm text-primary-500 font-medium border border-primary-200 rounded-full px-3 py-1.5">
                 All Upcoming Visits
               </Text>
             </Pressable>
           </View>
-
+          {isError && (
+            <View className="  p-4 rounded-2xl border border-red-200 bg-red-50">
+              <Text className="text-danger text-sm font-medium mb-1">
+                Couldn't load your visits
+              </Text>
+              <Text className="text-muted text-xs mb-3">
+                {(error as { message?: string })?.message ??
+                  "Check your connection and try again."}
+              </Text>
+              <Pressable
+                onPress={() => refetch()}
+                className="self-start h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center"
+              >
+                {isRefetching ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white text-sm font-medium">Retry</Text>
+                )}
+              </Pressable>
+            </View>
+          )}
           {/* ── Visit list ── */}
-          {todayVisits.length === 0 ? (
+          {todayVisits.length === 0 && !isError ? (
             <View className="bg-white rounded-2xl p-6 items-center border border-border">
               <Text className="text-muted text-sm text-center">
-                No visitors scheduled for today.{'\n'}Tap Generate to add one.
+                No visitors scheduled for today.{"\n"}Tap Generate to add one.
               </Text>
             </View>
           ) : (

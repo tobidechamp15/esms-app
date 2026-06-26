@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
+import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '@/store/authStore';
 
 SplashScreen.preventAutoHideAsync();
@@ -19,6 +19,14 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+});
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
 });
 
 export default function RootLayout() {

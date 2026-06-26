@@ -1,12 +1,15 @@
-import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { BackHeader } from '@/components/ui';
+import { ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { BackHeader } from "@/components/ui";
 
 export default function LegalScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <BackHeader title="Legal & Privacy" />
-      <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-6 pt-6"
+        showsVerticalScrollIndicator={false}
+      >
         <Section title="Terms of Use">
           {`By using this application, you agree to comply with these Terms of Use.\n\nThis application is designed to help residents manage visitor access within their estate. Access to the application is limited to verified residents and authorized users.\n\nUsers are responsible for maintaining the security of their account, phone number, and PIN. Any activity carried out through a user's account will be considered authorized by that user.\n\nResidents are solely responsible for all visitor access codes generated through their account. Access codes should only be shared with intended visitors and must not be distributed to unauthorized persons.\n\nEstate management reserves the right to suspend, restrict, or revoke access to any account found to be in violation of estate rules or these Terms of Use.`}
         </Section>

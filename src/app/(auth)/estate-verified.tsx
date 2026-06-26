@@ -69,7 +69,7 @@ export default function EstateVerifiedScreen() {
               </View>
               <View
                 onTouchEnd={() => router.push("/(auth)/phone")}
-                className="flex-1 h-14 bg-primary-500 rounded-2xl items-center justify-center"
+                className="flex-1 h-14 bg-[#084BA3] rounded-2xl items-center justify-center"
               >
                 <Text className="text-white text-base font-semibold">
                   Create Account

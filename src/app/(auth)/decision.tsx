@@ -41,7 +41,7 @@ export default function WelcomeScreen() {
           {/* Primary CTA */}
           {/* <Pressable
             onPress={() => router.push("/(auth)/estate-pin")}
-            className="h-14 bg-primary-500 rounded-2xl items-center justify-center mb-4"
+            className="h-14 bg-[#084BA3] rounded-2xl items-center justify-center mb-4"
           >
             <Text className="text-white text-base font-semibold">
               Enter Estate PIN
@@ -59,7 +59,7 @@ export default function WelcomeScreen() {
 
             <Pressable
               onPress={() => router.push("/(auth)/estate-pin")}
-              className="flex-1 h-14 bg-primary-500 rounded-2xl items-center justify-center"
+              className="flex-1 h-14 bg-[#084BA3] rounded-2xl items-center justify-center"
             >
               <Text className="text-white text-base font-semibold">
                 Create Account

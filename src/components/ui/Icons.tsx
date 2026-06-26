@@ -194,7 +194,7 @@ export function Copy({
   );
 }
 
-export function Share({
+export function ShareIcon({
   size = 24,
   color = "#000",
   strokeWidth = 2,

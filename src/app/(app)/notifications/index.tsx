@@ -1,8 +1,14 @@
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useMarkRead, useNotifications } from '@/hooks/useQueries';
-import type { AppNotification } from '@/types';
+import { useMarkRead, useNotifications } from "@/hooks/useQueries";
+import type { AppNotification } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -11,19 +17,23 @@ function timeAgo(dateStr: string): string {
   const mins = Math.floor(diff / 60_000);
   const hrs = Math.floor(mins / 60);
   const days = Math.floor(hrs / 24);
-  if (days >= 7) return `${Math.floor(days / 7)} week${Math.floor(days / 7) > 1 ? 's' : ''} ago`;
+  if (days >= 7)
+    return `${Math.floor(days / 7)} week${Math.floor(days / 7) > 1 ? "s" : ""} ago`;
   if (days > 1) return `${days} days ago`;
-  if (days === 1) return 'Yesterday';
-  if (hrs > 0) return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+  if (days === 1) return "Yesterday";
+  if (hrs > 0) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
   if (mins > 0) return `${mins} min ago`;
-  return 'Just now';
+  return "Just now";
 }
 
-function typeLabel(type: AppNotification['type']): string {
+function typeLabel(type: AppNotification["type"]): string {
   switch (type) {
-    case 'security_notice': return 'Security Notice';
-    case 'estate_update':   return 'Estate Update';
-    case 'visitor_alert':   return 'Visitor Alert';
+    case "security_notice":
+      return "Security Notice";
+    case "estate_update":
+      return "Estate Update";
+    case "visitor_alert":
+      return "Visitor Alert";
   }
 }
 
@@ -40,7 +50,7 @@ function NotifCard({
     <Pressable
       onPress={!notif.isRead ? onRead : undefined}
       className={`px-6 py-4 border-b border-border ${
-        !notif.isRead ? 'bg-primary-50/60' : 'bg-white'
+        !notif.isRead ? "bg-primary-50/60" : "bg-white"
       }`}
     >
       <View className="flex-row justify-between items-start mb-1.5">
@@ -53,7 +63,7 @@ function NotifCard({
 
       {/* Unread dot */}
       {!notif.isRead && (
-        <View className="absolute top-4 right-5 w-2 h-2 rounded-full bg-primary-500" />
+        <View className="absolute top-4 right-5 w-2 h-2 rounded-full bg-[#084BA3]" />
       )}
     </Pressable>
   );
@@ -75,13 +85,14 @@ export default function NotificationsScreen() {
         <View className="flex-row items-center gap-3">
           <Text className="text-2xl font-bold text-navy">Notifications</Text>
           {unread > 0 && (
-            <View className="bg-primary-500 rounded-full px-2 py-0.5">
+            <View className="bg-[#084BA3] rounded-full px-2 py-0.5">
               <Text className="text-white text-xs font-bold">{unread}</Text>
             </View>
           )}
         </View>
         <Text className="text-sm text-muted mt-1">
-          Stay updated with important notices from estate management and security.
+          Stay updated with important notices from estate management and
+          security.
         </Text>
       </View>
 

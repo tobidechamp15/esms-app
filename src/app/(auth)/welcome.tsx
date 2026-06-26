@@ -31,7 +31,7 @@ export default function WelcomeScreen() {
 
             <Pressable
               onPress={() => router.push("/(auth)/estate-pin")}
-              className="h-14 bg-primary-500 rounded-2xl items-center justify-center"
+              className="h-14 bg-[#084BA3] rounded-2xl items-center justify-center"
             >
               <Text className="text-white text-base font-semibold">
                 Enter Estate PIN
