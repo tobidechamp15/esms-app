@@ -11,6 +11,7 @@ import {
   logout,
   registerWithPhone,
 } from "@/api/auth";
+import { registerPushToken } from "@/lib/push";
 import { PIN_ENDPOINTS, STORAGE_KEYS } from "@/constants/api";
 import type { AuthState, RegisterPhonePayload, User } from "@/types";
 
@@ -81,6 +82,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const { user, tokens } = await registerWithPhone(payload, otpToken);
       set({ user, tokens, isLoading: false });
+      registerPushToken(); // fire-and-forget device token registration
     } catch (err) {
       const message =
         (err as { message?: string }).message ?? "Registration failed.";
@@ -95,6 +97,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       const { user, tokens } = await loginWithPhone(otpToken);
       const pinHash = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
       set({ user, tokens, isPinSet: Boolean(pinHash), isLoading: false });
+      registerPushToken(); // fire-and-forget device token registration
     } catch (err) {
       const message = (err as { message?: string }).message ?? "Login failed.";
       set({ isLoading: false, error: message });
@@ -109,7 +112,14 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       // Mirror the new PIN into device SecureStore so the PIN lock works offline.
       const hash = await hashPin(pin);
       await SecureStore.setItemAsync(STORAGE_KEYS.PIN_HASH, hash);
-      set({ user, tokens, isPinSet: true, isPinVerified: true, isLoading: false });
+      set({
+        user,
+        tokens,
+        isPinSet: true,
+        isPinVerified: true,
+        isLoading: false,
+      });
+      registerPushToken(); // fire-and-forget device token registration
     } catch (err) {
       const message =
         (err as { message?: string }).message ?? "Activation failed.";
