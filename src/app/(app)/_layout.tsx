@@ -1,7 +1,15 @@
 import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
 
-import { Bell, Home, PlusCircle, QrCode, Settings, Shield, Users } from "@/components/ui/Icons";
+import {
+  Bell,
+  Home,
+  PlusCircle,
+  QrCode,
+  Settings,
+  Shield,
+  Users,
+} from "@/components/ui/Icons";
 import { useUnreadCount } from "@/hooks/useQueries";
 import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 
@@ -126,7 +134,12 @@ export default function AppLayout() {
         name="notifications/index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon={Bell} focused={focused} label="Alerts" badge={unreadCount} />
+            <TabIcon
+              icon={Bell}
+              focused={focused}
+              label="Alerts"
+              badge={unreadCount}
+            />
           ),
         }}
       />
@@ -141,13 +154,22 @@ export default function AppLayout() {
       />
 
       {/* Hidden sub-screens */}
+      <Tabs.Screen name="notifications/announce" options={{ href: null }} />
+      <Tabs.Screen name="notifications/report" options={{ href: null }} />
+      <Tabs.Screen name="panic/index" options={{ href: null }} />
       <Tabs.Screen name="verify/result" options={{ href: null }} />
       <Tabs.Screen name="verify/scan" options={{ href: null }} />
       <Tabs.Screen name="support/manage" options={{ href: null }} />
-      <Tabs.Screen name="support/generate-activation" options={{ href: null }} />
+      <Tabs.Screen
+        name="support/generate-activation"
+        options={{ href: null }}
+      />
       <Tabs.Screen name="settings/account" options={{ href: null }} />
       <Tabs.Screen name="settings/security" options={{ href: null }} />
-      <Tabs.Screen name="settings/notification-settings" options={{ href: null }} />
+      <Tabs.Screen
+        name="settings/notification-settings"
+        options={{ href: null }}
+      />
       <Tabs.Screen name="settings/legal" options={{ href: null }} />
       <Tabs.Screen name="settings/report-concern" options={{ href: null }} />
     </Tabs>

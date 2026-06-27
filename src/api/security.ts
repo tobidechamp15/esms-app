@@ -18,7 +18,9 @@ export interface GeneratedCode {
 }
 
 /** Generate a single-use PIN reset code for a resident or security account. */
-export async function generateResetCode(userId: string): Promise<GeneratedCode> {
+export async function generateResetCode(
+  userId: string,
+): Promise<GeneratedCode> {
   const { data } = await apiClient.post<ApiResponse<GeneratedCode>>(
     SECURITY_ENDPOINTS.RESET_CODE(userId),
   );
@@ -47,10 +49,9 @@ export async function updateAccountStatus(
   action: AccountStatusAction,
   pin: string,
 ): Promise<{ id: string; status: string }> {
-  const { data } = await apiClient.patch<ApiResponse<{ id: string; status: string }>>(
-    SECURITY_ENDPOINTS.ACCOUNT_STATUS(userId),
-    { action, pin },
-  );
+  const { data } = await apiClient.patch<
+    ApiResponse<{ id: string; status: string }>
+  >(SECURITY_ENDPOINTS.ACCOUNT_STATUS(userId), { action, pin });
   return data.data;
 }
 
@@ -97,13 +98,20 @@ export interface ActivityLogItem {
   createdAt: string;
 }
 
-export async function getActivityLogs(params: {
-  userId?: string;
-  page?: number;
-} = {}): Promise<PaginatedResponse<ActivityLogItem>> {
+export async function getActivityLogs(
+  params: {
+    userId?: string;
+    page?: number;
+  } = {},
+): Promise<PaginatedResponse<ActivityLogItem>> {
   const { data } = await apiClient.get<PaginatedResponse<ActivityLogItem>>(
     ACTIVITY_ENDPOINTS.BASE,
-    { params: { page: params.page ?? 1, ...(params.userId ? { userId: params.userId } : {}) } },
+    {
+      params: {
+        page: params.page ?? 1,
+        ...(params.userId ? { userId: params.userId } : {}),
+      },
+    },
   );
   return data;
 }
@@ -121,7 +129,9 @@ export interface Announcement {
   createdAt: string;
 }
 
-export async function getAnnouncements(page = 1): Promise<PaginatedResponse<Announcement>> {
+export async function getAnnouncements(
+  page = 1,
+): Promise<PaginatedResponse<Announcement>> {
   const { data } = await apiClient.get<PaginatedResponse<Announcement>>(
     ANNOUNCEMENT_ENDPOINTS.BASE,
     { params: { page } },
@@ -144,9 +154,9 @@ export async function createAnnouncement(payload: {
 // ─── Panic ────────────────────────────────────────────────────────────────────
 
 export async function triggerPanic(): Promise<{ notificationId: string }> {
-  const { data } = await apiClient.post<ApiResponse<{ notificationId: string }>>(
-    PANIC_ENDPOINTS.BASE,
-  );
+  const { data } = await apiClient.post<
+    ApiResponse<{ notificationId: string }>
+  >(PANIC_ENDPOINTS.BASE);
   return data.data;
 }
 
@@ -156,9 +166,50 @@ export async function updateConcernStatus(
   id: string,
   status: "submitted" | "under_review" | "resolved",
 ): Promise<{ id: string; status: string }> {
-  const { data } = await apiClient.patch<ApiResponse<{ id: string; status: string }>>(
-    CONCERN_STATUS_ENDPOINT(id),
-    { status },
+  const { data } = await apiClient.patch<
+    ApiResponse<{ id: string; status: string }>
+  >(CONCERN_STATUS_ENDPOINT(id), { status });
+  return data.data;
+}
+
+// ─── Resident reports (concerns) ──────────────────────────────────────────────
+
+export interface ConcernResident {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  houseNumber?: string;
+  streetName?: string;
+}
+
+export interface Concern {
+  id: string;
+  subject: string;
+  address: string;
+  attachmentUrl?: string | null;
+  status: "submitted" | "under_review" | "resolved";
+  submittedAt: string;
+  createdAt: string;
+  resident: ConcernResident | null;
+}
+
+export async function getConcerns(
+  params: { status?: string; page?: number } = {},
+): Promise<PaginatedResponse<Concern>> {
+  const { data } = await apiClient.get<PaginatedResponse<Concern>>(
+    "/concerns",
+    {
+      params: {
+        page: params.page ?? 1,
+        ...(params.status ? { status: params.status } : {}),
+      },
+    },
   );
+  return data;
+}
+
+export async function getConcern(id: string): Promise<Concern> {
+  const { data } = await apiClient.get<ApiResponse<Concern>>(`/concerns/${id}`);
   return data.data;
 }

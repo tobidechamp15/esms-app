@@ -8,6 +8,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useMarkRead, useNotifications } from "@/hooks/useQueries";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
+import { SecurityNotifications } from "@/components/security/SecurityNotifications";
 import type { AppNotification } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,6 +74,12 @@ function NotifCard({
 // ─── Notifications Screen ─────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const isSecurity = useAuthStore(selectIsSecurity);
+  if (isSecurity) return <SecurityNotifications />;
+  return <ResidentNotifications />;
+}
+
+function ResidentNotifications() {
   const { data, isLoading } = useNotifications();
   const markRead = useMarkRead();
 

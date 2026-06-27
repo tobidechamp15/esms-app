@@ -36,7 +36,8 @@ export async function registerPushToken(): Promise<void> {
   if (!projectId) return; // no EAS project configured yet — nothing to register
 
   try {
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId }))
+      .data;
     await apiClient.post(AUTH_ENDPOINTS.PUSH_TOKEN, { pushToken: token });
   } catch {
     // best-effort — never block app flow on push registration

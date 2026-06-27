@@ -27,7 +27,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -58,7 +59,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
@@ -66,8 +68,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "4bdbadc1-411a-4c64-a700-422a2879ccf7"
       }
-    }
+    },
+    "owner": "tobilobaemma04"
   }
 }
