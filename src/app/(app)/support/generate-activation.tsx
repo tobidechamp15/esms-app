@@ -25,7 +25,7 @@ export default function GenerateActivationScreen() {
   const [error, setError] = useState("");
   const [codeModal, setCodeModal] = useState<GeneratedCode | null>(null);
 
-  const isValid = /^\+[1-9]\d{6,14}$/.test(phone.trim());
+  const isValid = /^(?:\+234|234|0)[789]\d{9}$/.test(phone.trim());
 
   async function handleGenerate() {
     setError("");

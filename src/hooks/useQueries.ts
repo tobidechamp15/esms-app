@@ -32,6 +32,8 @@ import {
   createAnnouncement,
   triggerPanic,
   updateConcernStatus,
+  getConcerns,
+  getConcern,
   type AccountStatusAction,
 } from '@/api/security';
 
@@ -248,5 +250,21 @@ export function useUpdateConcernStatus() {
     mutationFn: ({ id, status }: { id: string; status: 'submitted' | 'under_review' | 'resolved' }) =>
       updateConcernStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['concerns'] }),
+  });
+}
+
+export function useConcerns(status?: string) {
+  return useQuery({
+    queryKey: ['concerns', status ?? 'all'],
+    queryFn: () => getConcerns({ status }),
+    staleTime: 30_000,
+  });
+}
+
+export function useConcern(id: string) {
+  return useQuery({
+    queryKey: ['concern', id],
+    queryFn: () => getConcern(id),
+    enabled: Boolean(id),
   });
 }

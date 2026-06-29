@@ -15,6 +15,7 @@ export const AUTH_ENDPOINTS = {
   REFRESH: "/auth/refresh",
   ME: "/auth/me",
   ACTIVATE: "/auth/activate",
+  ACTIVATE_VERIFY_CODE: "/auth/activate/verify-code",
   PUSH_TOKEN: "/users/me/push-token",
 } as const;
 

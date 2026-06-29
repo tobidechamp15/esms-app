@@ -70,8 +70,7 @@ export default function ReportDetailScreen() {
             <Text className="text-xs text-muted mt-1">
               {new Date(report.submittedAt).toLocaleString()}
             </Text>
-
-            {report.attachmentUrl ? (
+            {/* {report.attachmentUrl ? (
               <Image
                 source={{ uri: report.attachmentUrl }}
                 className="w-full h-48 rounded-xl mt-4"
@@ -83,7 +82,7 @@ export default function ReportDetailScreen() {
                 className="w-full h-48 rounded-xl mt-4"
                 resizeMode="cover"
               />
-            )}
+            )} */}
           </View>
 
           <Text className="text-sm font-semibold text-navy mt-6 mb-3">

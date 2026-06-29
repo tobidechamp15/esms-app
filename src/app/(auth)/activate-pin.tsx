@@ -10,7 +10,10 @@ const PIN_LENGTH = 4;
 
 export default function ActivatePinScreen() {
   const router = useRouter();
-  const { phone, code } = useLocalSearchParams<{ phone: string; code: string }>();
+  const { phone, code } = useLocalSearchParams<{
+    phone: string;
+    code: string;
+  }>();
   const activateOfficer = useAuthStore((s) => s.activateOfficer);
 
   const [step, setStep] = useState<"create" | "confirm">("create");
@@ -47,8 +50,10 @@ export default function ActivatePinScreen() {
     try {
       setLoading(true);
       await activateOfficer(phone!, code!, value);
-      // Activated + logged in. Land on profile setup (security flow continues there).
-      router.replace("/(auth)/complete-profile" as any);
+      // Officers never go through the resident "Complete Profile" (which asks for
+      // house number / street). Their name comes from the activation-code step;
+      // if it's blank they can set it in Settings → Account Information.
+      router.replace("/(app)/verify" as any);
     } catch (err) {
       setError((err as { message?: string }).message ?? "Activation failed.");
       setLoading(false);
@@ -72,19 +77,30 @@ export default function ActivatePinScreen() {
             : "Re-enter your 4-digit PIN to confirm."}
         </Text>
 
-        <PinDots length={PIN_LENGTH} filled={pin.length} error={Boolean(error)} />
-        {error ? <Text className="text-danger text-sm mt-3">{error}</Text> : null}
+        <PinDots
+          length={PIN_LENGTH}
+          filled={pin.length}
+          error={Boolean(error)}
+        />
+        {error ? (
+          <Text className="text-danger text-sm mt-3">{error}</Text>
+        ) : null}
 
         {loading && (
           <View className="flex-row items-center mt-6">
             <ActivityIndicator color="#1B4FD8" />
-            <Text className="text-muted text-sm ml-3">Activating your account…</Text>
+            <Text className="text-muted text-sm ml-3">
+              Activating your account…
+            </Text>
           </View>
         )}
       </View>
 
       <View className="px-6 pb-6 gap-4">
-        <NumPad onPress={handleDigit} onDelete={() => setPin((p) => p.slice(0, -1))} />
+        <NumPad
+          onPress={handleDigit}
+          onDelete={() => setPin((p) => p.slice(0, -1))}
+        />
       </View>
     </SafeAreaView>
   );

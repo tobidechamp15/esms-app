@@ -27,7 +27,7 @@ export default function Index() {
 
   // 1. Estate PIN has never been entered — very first launch
   if (!estateVerified) {
-    return <Redirect href="/(auth)/welcome" />;
+    return <Redirect href={"/(auth)/role-select" as any} />;
   }
 
   // 2. Estate known but no account session — returning unauthenticated user

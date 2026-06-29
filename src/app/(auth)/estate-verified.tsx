@@ -35,7 +35,7 @@ export default function EstateVerifiedScreen() {
                 await SecureStore.deleteItemAsync(
                   STORAGE_KEYS.ESTATE_PIN_VERIFIED,
                 );
-                router.replace("/(auth)/welcome");
+                router.replace("/(auth)/role-select" as any);
               }}
               className="px-6 py-4 border-b border-border bg-white mt-[120px]"
             >

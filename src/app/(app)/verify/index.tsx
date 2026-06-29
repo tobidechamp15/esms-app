@@ -2,8 +2,6 @@ import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
-  Easing,
   Pressable,
   Text,
   TextInput,
@@ -12,23 +10,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { QrCode, X } from "@/components/ui/Icons";
-import { useVerifyCode, usePanic } from "@/hooks/useQueries";
+import { useVerifyCode } from "@/hooks/useQueries";
 import { useAuthStore } from "@/store/authStore";
 import { ESTATE_NAME } from "@/constants/api";
 
 const CODE_LENGTH = 5;
-const PANIC_HOLD_MS = 1200;
 
 export default function VerifyHomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const verify = useVerifyCode();
-  const panic = usePanic();
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [showBanner, setShowBanner] = useState(true);
-  const [panicSent, setPanicSent] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
 
@@ -36,34 +31,6 @@ export default function VerifyHomeScreen() {
     const h = new Date().getHours();
     return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
   })();
-
-  // ── Panic: press-and-hold the megaphone (kept deliberate to avoid misfires) ──
-  const panicProgress = useRef(new Animated.Value(0)).current;
-  function panicStart() {
-    Animated.timing(panicProgress, {
-      toValue: 1,
-      duration: PANIC_HOLD_MS,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        panicProgress.setValue(0);
-        handlePanic();
-      }
-    });
-  }
-  function panicCancel() {
-    Animated.timing(panicProgress, { toValue: 0, duration: 120, useNativeDriver: false }).start();
-  }
-  async function handlePanic() {
-    try {
-      await panic.mutateAsync();
-      setPanicSent(true);
-      setTimeout(() => setPanicSent(false), 4000);
-    } catch {
-      /* surfaced via toast */
-    }
-  }
 
   async function handleVerify() {
     if (code.length < 4) return;
@@ -120,27 +87,13 @@ export default function VerifyHomeScreen() {
           <Text className="text-sm text-muted mt-1">{ESTATE_NAME}</Text>
         </View>
 
-        {/* Press-and-hold megaphone */}
-        <Pressable onPressIn={panicStart} onPressOut={panicCancel} hitSlop={8}>
-          <View className="w-14 h-14 rounded-full bg-danger items-center justify-center overflow-hidden shadow">
-            <Animated.View
-              style={{
-                position: "absolute",
-                left: 0, right: 0, bottom: 0,
-                height: panicProgress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
-                backgroundColor: "rgba(0,0,0,0.25)",
-              }}
-            />
+        {/* Panic megaphone → countdown screen (the 10s countdown is the misfire guard) */}
+        <Pressable onPress={() => router.push("/(app)/panic" as any)} hitSlop={8}>
+          <View className="w-14 h-14 rounded-full bg-danger items-center justify-center shadow">
             <Text className="text-2xl">📢</Text>
           </View>
         </Pressable>
       </View>
-
-      {panicSent ? (
-        <Text className="text-green-600 text-xs text-center mt-2 px-6">
-          Emergency alert sent to residents and officers.
-        </Text>
-      ) : null}
 
       {/* ── Verify card ── */}
       <View className="px-6 mt-6">

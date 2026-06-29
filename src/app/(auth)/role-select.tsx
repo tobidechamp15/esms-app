@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ESTATE_NAME } from "@/constants/api";
 
-export default function WelcomeScreen() {
+export default function RoleSelectScreen() {
   const router = useRouter();
 
   return (
@@ -24,27 +24,29 @@ export default function WelcomeScreen() {
                 Welcome to {ESTATE_NAME}
               </Text>
               <Text className="text-base text-white/70 leading-6">
-                Manage visitors, generate access codes, and enjoy seamless entry
-                into your estate.
+                Choose how you'll be using Ventry to get started.
               </Text>
             </View>
 
+            {/* Resident → estate PIN → create account / login */}
             <Pressable
               onPress={() => router.push("/(auth)/estate-pin")}
-              className="h-14 bg-[#084BA3] rounded-2xl items-center justify-center"
+              className="h-16 bg-[#084BA3] rounded-2xl items-center justify-center mb-3"
             >
-              <Text className="text-white text-base font-semibold">
-                Enter Estate PIN
+              <Text className="text-white text-base font-semibold">I'm a Resident</Text>
+              <Text className="text-white/70 text-xs mt-0.5">
+                Generate codes and manage your visitors
               </Text>
             </Pressable>
 
-            {/* New security officers (incl. the first/admin) activate here */}
+            {/* Security → activate flow (no estate PIN; activated by an officer) */}
             <Pressable
               onPress={() => router.push("/(auth)/activate")}
-              className="h-14 rounded-2xl items-center justify-center mt-3 border border-white/30"
+              className="h-16 rounded-2xl items-center justify-center border border-white/40"
             >
-              <Text className="text-white text-base font-semibold">
-                Activate Security Account
+              <Text className="text-white text-base font-semibold">I'm Security</Text>
+              <Text className="text-white/60 text-xs mt-0.5">
+                Verify visitors and manage estate access
               </Text>
             </Pressable>
           </SafeAreaView>

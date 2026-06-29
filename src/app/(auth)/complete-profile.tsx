@@ -53,7 +53,7 @@ export default function CompleteProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <BackHeader title="Create Account" />
+      <BackHeader title="Create Account"  onBack={() => router.back()}/>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"

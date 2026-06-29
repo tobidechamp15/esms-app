@@ -22,20 +22,14 @@ import {
   useGenerateResetCode,
   useUpdateAccountStatus,
   useActivityLogs,
+  useTransferAdmin,
 } from "@/hooks/useQueries";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, selectIsAdmin } from "@/store/authStore";
 
-type PendingAction = {
-  action: AccountStatusAction;
-  label: string;
-  danger?: boolean;
-};
+type PendingAction = { action: AccountStatusAction; label: string; danger?: boolean };
 
 export default function ManageAccountScreen() {
-  const { id, role } = useLocalSearchParams<{
-    id: string;
-    role: "resident" | "security";
-  }>();
+  const { id, role } = useLocalSearchParams<{ id: string; role: "resident" | "security" }>();
   const selfId = useAuthStore((s) => s.user?.id);
   const isSelf = id === selfId;
 
@@ -49,12 +43,16 @@ export default function ManageAccountScreen() {
 
   const resetCode = useGenerateResetCode();
   const accountStatus = useUpdateAccountStatus();
+  const transferAdmin = useTransferAdmin();
+  const viewerIsAdmin = useAuthStore(selectIsAdmin);
   const isSecurityTarget = role === "security";
   const activity = useActivityLogs(isSecurityTarget ? id : undefined);
 
   const [codeModal, setCodeModal] = useState<GeneratedCode | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [pinError, setPinError] = useState("");
+  const [transferPin, setTransferPin] = useState(false);
+  const [transferError, setTransferError] = useState("");
 
   async function handleResetCode() {
     setPinError("");
@@ -70,18 +68,22 @@ export default function ManageAccountScreen() {
     if (!pending) return;
     setPinError("");
     try {
-      await accountStatus.mutateAsync({
-        userId: id,
-        action: pending.action,
-        pin,
-      });
+      await accountStatus.mutateAsync({ userId: id, action: pending.action, pin });
       setPending(null);
       refetch();
     } catch (err) {
-      setPinError(
-        (err as { message?: string })?.message ??
-          "Action failed. Check your PIN.",
-      );
+      setPinError((err as { message?: string })?.message ?? "Action failed. Check your PIN.");
+    }
+  }
+
+  async function handleTransfer(pin: string) {
+    setTransferError("");
+    try {
+      await transferAdmin.mutateAsync({ targetUserId: id, pin });
+      setTransferPin(false);
+      refetch();
+    } catch (err) {
+      setTransferError((err as { message?: string })?.message ?? "Transfer failed. Check your PIN.");
     }
   }
 
@@ -101,13 +103,8 @@ export default function ManageAccountScreen() {
       <SafeAreaView className="flex-1 bg-surface">
         <BackHeader title="Manage Account" />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-danger text-sm mb-2">
-            Couldn't load this account
-          </Text>
-          <Pressable
-            onPress={() => refetch()}
-            className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center"
-          >
+          <Text className="text-danger text-sm mb-2">Couldn't load this account</Text>
+          <Pressable onPress={() => refetch()} className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center">
             <Text className="text-white text-sm font-medium">Retry</Text>
           </Pressable>
         </View>
@@ -116,22 +113,15 @@ export default function ManageAccountScreen() {
   }
 
   const statusColor =
-    user.status === "active"
-      ? "text-green-600"
-      : user.status === "suspended"
-        ? "text-danger"
-        : user.status === "pending"
-          ? "text-amber-600"
-          : "text-muted";
+    user.status === "active" ? "text-green-600"
+    : user.status === "suspended" ? "text-danger"
+    : user.status === "pending" ? "text-amber-600"
+    : "text-muted";
 
   return (
     <SafeAreaView className="flex-1 bg-surface">
       <BackHeader title="Manage Account" />
-      <ScrollView
-        className="flex-1 px-6"
-        contentContainerClassName="pb-10"
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView className="flex-1 px-6" contentContainerClassName="pb-10" showsVerticalScrollIndicator={false}>
         {/* Identity */}
         <View className="bg-white border border-border rounded-2xl p-5 mt-4">
           <Text className="text-xl font-bold text-navy">
@@ -139,13 +129,8 @@ export default function ManageAccountScreen() {
           </Text>
           <Text className="text-sm text-muted mt-1">{user.phone}</Text>
           <View className="flex-row items-center gap-3 mt-3">
-            <Text className={`text-xs font-semibold capitalize ${statusColor}`}>
-              ● {user.status}
-            </Text>
-            <Text className="text-xs text-muted capitalize">
-              {user.role}
-              {user.isAdmin ? " · admin" : ""}
-            </Text>
+            <Text className={`text-xs font-semibold capitalize ${statusColor}`}>● {user.status}</Text>
+            <Text className="text-xs text-muted capitalize">{user.role}{user.isAdmin ? " · admin" : ""}</Text>
           </View>
           {role === "resident" && (user.houseNumber || user.streetName) ? (
             <Text className="text-xs text-muted mt-2">
@@ -155,18 +140,12 @@ export default function ManageAccountScreen() {
         </View>
 
         {/* Actions */}
-        <Text className="text-sm font-semibold text-navy mt-6 mb-3">
-          Actions
-        </Text>
+        <Text className="text-sm font-semibold text-navy mt-6 mb-3">Actions</Text>
 
         {/* Reset PIN code — not allowed for self */}
         <ActionRow
           label={`Reset ${role === "security" ? "Security" : "Resident"} PIN Code`}
-          hint={
-            isSelf
-              ? "You can't generate a code for your own account"
-              : "Generates a 4-digit reset code (5 min)"
-          }
+          hint={isSelf ? "You can't generate a code for your own account" : "Generates a 4-digit reset code (5 min)"}
           disabled={isSelf || resetCode.isPending}
           loading={resetCode.isPending}
           onPress={handleResetCode}
@@ -178,69 +157,47 @@ export default function ManageAccountScreen() {
             label="Reactivate Account"
             hint="Restore access to this account"
             disabled={isSelf}
-            onPress={() =>
-              setPending({ action: "reactivate", label: "Reactivate Account" })
-            }
+            onPress={() => setPending({ action: "reactivate", label: "Reactivate Account" })}
           />
         ) : (
           <ActionRow
             label="Suspend Account"
-            hint={
-              isSelf
-                ? "You can't suspend your own account"
-                : "Temporarily disable access"
-            }
+            hint={isSelf ? "You can't suspend your own account" : "Temporarily disable access"}
             disabled={isSelf || user.isAdmin}
-            onPress={() =>
-              setPending({
-                action: "suspend",
-                label: "Suspend Account",
-                danger: true,
-              })
-            }
+            onPress={() => setPending({ action: "suspend", label: "Suspend Account", danger: true })}
+          />
+        )}
+
+        {/* Grant / Transfer admin — only the current admin, targeting another active officer */}
+        {viewerIsAdmin && isSecurityTarget && !isSelf && !user.isAdmin && user.status === "active" && (
+          <ActionRow
+            label="Grant Admin Access"
+            hint="Transfers your admin privileges to this officer. You will become a regular officer."
+            onPress={() => setTransferPin(true)}
           />
         )}
 
         {/* Delete */}
         <ActionRow
           label="Delete Account"
-          hint={
-            user.isAdmin
-              ? "Transfer admin before deleting"
-              : "Permanently remove this account"
-          }
+          hint={user.isAdmin ? "Transfer admin before deleting" : "Permanently remove this account"}
           danger
           disabled={isSelf || user.isAdmin}
-          onPress={() =>
-            setPending({
-              action: "delete",
-              label: "Delete Account",
-              danger: true,
-            })
-          }
+          onPress={() => setPending({ action: "delete", label: "Delete Account", danger: true })}
         />
 
         {/* Activity log (security targets only) */}
         {isSecurityTarget && (
           <>
-            <Text className="text-sm font-semibold text-navy mt-7 mb-3">
-              Activity Log
-            </Text>
+            <Text className="text-sm font-semibold text-navy mt-7 mb-3">Activity Log</Text>
             {activity.isLoading ? (
               <ActivityIndicator color="#1B4FD8" />
             ) : (activity.data?.data?.length ?? 0) === 0 ? (
-              <Text className="text-muted text-sm">
-                No recorded activity yet.
-              </Text>
+              <Text className="text-muted text-sm">No recorded activity yet.</Text>
             ) : (
               activity.data!.data.map((item) => (
-                <View
-                  key={item.id}
-                  className="bg-white border border-border rounded-2xl p-4 mb-2"
-                >
-                  <Text className="text-navy text-sm font-medium">
-                    {item.description}
-                  </Text>
+                <View key={item.id} className="bg-white border border-border rounded-2xl p-4 mb-2">
+                  <Text className="text-navy text-sm font-medium">{item.description}</Text>
                   <Text className="text-muted text-xs mt-1">
                     {new Date(item.createdAt).toLocaleString()}
                   </Text>
@@ -261,16 +218,24 @@ export default function ManageAccountScreen() {
       />
 
       <PinConfirmModal
+        visible={transferPin}
+        title="Transfer Admin Access"
+        message={`Transfer your admin privileges to ${user.firstName} ${user.lastName}? You will become a regular officer.`}
+        danger
+        loading={transferAdmin.isPending}
+        error={transferError}
+        onCancel={() => { setTransferPin(false); setTransferError(""); }}
+        onConfirm={handleTransfer}
+      />
+
+      <PinConfirmModal
         visible={Boolean(pending)}
         title={pending?.label ?? ""}
         message={`Confirm to ${pending?.label.toLowerCase()} for ${user.firstName} ${user.lastName}.`}
         danger={pending?.danger}
         loading={accountStatus.isPending}
         error={pinError}
-        onCancel={() => {
-          setPending(null);
-          setPinError("");
-        }}
+        onCancel={() => { setPending(null); setPinError(""); }}
         onConfirm={handleConfirmAction}
       />
     </SafeAreaView>
@@ -278,49 +243,23 @@ export default function ManageAccountScreen() {
 }
 
 function ActionRow({
-  label,
-  hint,
-  danger,
-  disabled,
-  loading,
-  onPress,
+  label, hint, danger, disabled, loading, onPress,
 }: {
-  label: string;
-  hint?: string;
-  danger?: boolean;
-  disabled?: boolean;
-  loading?: boolean;
-  onPress: () => void;
+  label: string; hint?: string; danger?: boolean; disabled?: boolean; loading?: boolean; onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
       className={`bg-white border rounded-2xl p-4 mb-3 flex-row items-center justify-between ${
-        disabled
-          ? "border-border opacity-50"
-          : danger
-            ? "border-red-200"
-            : "border-border"
+        disabled ? "border-border opacity-50" : danger ? "border-red-200" : "border-border"
       }`}
     >
       <View className="flex-1 pr-3">
-        <Text
-          className={`text-sm font-semibold ${danger ? "text-danger" : "text-navy"}`}
-        >
-          {label}
-        </Text>
-        {hint ? (
-          <Text className="text-xs text-muted mt-0.5">{hint}</Text>
-        ) : null}
+        <Text className={`text-sm font-semibold ${danger ? "text-danger" : "text-navy"}`}>{label}</Text>
+        {hint ? <Text className="text-xs text-muted mt-0.5">{hint}</Text> : null}
       </View>
-      {loading ? (
-        <ActivityIndicator color="#1B4FD8" />
-      ) : (
-        <Text
-          className={`text-lg ${danger ? "text-danger" : "text-primary-500"}`}
-        >
-          ›
-        </Text>
+      {loading ? <ActivityIndicator color="#1B4FD8" /> : (
+        <Text className={`text-lg ${danger ? "text-danger" : "text-primary-500"}`}>›</Text>
       )}
     </Pressable>
   );

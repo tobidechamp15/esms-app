@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
 
 export default function SettingsLayout() {
   return (
@@ -8,6 +8,8 @@ export default function SettingsLayout() {
       <Stack.Screen name="security" />
       <Stack.Screen name="notification-settings" />
       <Stack.Screen name="legal" />
+      <Stack.Screen name="report" />
+      <Stack.Screen name="announce" />
       <Stack.Screen name="report-concern" />
     </Stack>
   );

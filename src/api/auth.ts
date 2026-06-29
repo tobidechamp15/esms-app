@@ -110,6 +110,17 @@ export interface ActivateResponse {
   tokens: AuthTokens;
 }
 
+export async function verifyActivationCode(
+  phone: string,
+  code: string,
+): Promise<{ phone: string; firstName: string; lastName: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ phone: string; firstName: string; lastName: string }>>(
+    AUTH_ENDPOINTS.ACTIVATE_VERIFY_CODE,
+    { phone, code },
+  );
+  return data.data;
+}
+
 export async function activateAccount(
   phone: string,
   code: string,

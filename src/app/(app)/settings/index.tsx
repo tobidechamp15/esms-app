@@ -13,7 +13,7 @@ import {
   Shield,
   Upload,
 } from "@/components/ui/Icons";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 
 interface SettingRowProps {
   icon: React.ReactNode;
@@ -42,6 +42,7 @@ function SettingRow({ icon, label, onPress, danger }: SettingRowProps) {
 export default function SettingsScreen() {
   const router = useRouter();
   const logoutUser = useAuthStore((s) => s.logoutUser);
+  const isSecurity = useAuthStore(selectIsSecurity);
   const [showLogout, setShowLogout] = useState(false);
 
   async function handleLogout() {
@@ -55,7 +56,7 @@ export default function SettingsScreen() {
       <View className="px-6 pt-6 pb-4">
         <Text className="text-2xl font-bold text-navy">Settings</Text>
         <Text className="text-sm text-muted mt-0.5">
-          Manage your account, estate details, and app preferences.
+          Control your profile, PIN, notifications, and security preferences.
         </Text>
       </View>
 
@@ -81,11 +82,21 @@ export default function SettingsScreen() {
             label="Legal & Privacy"
             onPress={() => router.push("/(app)/settings/legal")}
           />
-          <SettingRow
-            icon={<AlertTriangle size={22} color="#0A1628" />}
-            label="Report a Concern"
-            onPress={() => router.push("/(app)/settings/report-concern")}
-          />
+          {isSecurity ? (
+            <SettingRow
+              icon={<AlertTriangle size={22} color="#0A1628" />}
+              label="Create An Announcement"
+              onPress={() =>
+                router.push("/(app)/settings/announce" as any)
+              }
+            />
+          ) : (
+            <SettingRow
+              icon={<AlertTriangle size={22} color="#0A1628" />}
+              label="Report a Concern"
+              onPress={() => router.push("/(app)/settings/report-concern")}
+            />
+          )}
           <SettingRow
             icon={<Text className="text-xl">👍</Text>}
             label="Rate Our App"
