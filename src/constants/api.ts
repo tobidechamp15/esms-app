@@ -1,5 +1,32 @@
-export const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_BASE_URL as string | undefined) ?? "";
+/**
+ * API Configuration
+ *
+ * Provides validated API configuration for the Ventry app.
+ * In production builds, enforces HTTPS requirement.
+ */
+
+function validateApiUrl(url: string | undefined): string {
+  if (!url) return "";
+
+  // In development (Expo Go / local), allow HTTP for local testing
+  if (__DEV__) return url;
+
+  // In production builds, HTTPS is MANDATORY
+  if (!url.startsWith("https://")) {
+    console.error(
+      "[SECURITY] API_BASE_URL must use HTTPS in production builds. " +
+        "Set EXPO_PUBLIC_API_BASE_URL to an https:// URL.",
+    );
+    // Return empty to force connection failure rather than sending data over HTTP
+    return "";
+  }
+
+  return url;
+}
+
+export const API_BASE_URL = validateApiUrl(
+  process.env.EXPO_PUBLIC_API_BASE_URL as string | undefined,
+);
 
 export const ESTATE_NAME =
   (process.env.EXPO_PUBLIC_ESTATE_NAME as string | undefined) ?? "Your Estate";

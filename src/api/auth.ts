@@ -6,6 +6,7 @@ import {
   ESTATE_ENDPOINTS,
   STORAGE_KEYS,
 } from "@/constants/api";
+import { sanitizeUserForStorage } from "@/utils/secureStorage";
 import type {
   ApiResponse,
   AuthTokens,
@@ -75,10 +76,9 @@ export async function registerWithPhone(
     { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(
-    STORAGE_KEYS.USER,
-    JSON.stringify(data.data.user),
-  );
+  // Store only sanitized user fields
+  const safeUser = sanitizeUserForStorage(data.data.user);
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(safeUser));
   return data.data;
 }
 
@@ -96,10 +96,9 @@ export async function loginWithPhone(otpToken: string): Promise<LoginResponse> {
     { headers: { Authorization: `Bearer ${otpToken}` } },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(
-    STORAGE_KEYS.USER,
-    JSON.stringify(data.data.user),
-  );
+  // Store only sanitized user fields
+  const safeUser = sanitizeUserForStorage(data.data.user);
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(safeUser));
   return data.data;
 }
 
@@ -114,10 +113,9 @@ export async function verifyActivationCode(
   phone: string,
   code: string,
 ): Promise<{ phone: string; firstName: string; lastName: string }> {
-  const { data } = await apiClient.post<ApiResponse<{ phone: string; firstName: string; lastName: string }>>(
-    AUTH_ENDPOINTS.ACTIVATE_VERIFY_CODE,
-    { phone, code },
-  );
+  const { data } = await apiClient.post<
+    ApiResponse<{ phone: string; firstName: string; lastName: string }>
+  >(AUTH_ENDPOINTS.ACTIVATE_VERIFY_CODE, { phone, code });
   return data.data;
 }
 
@@ -131,10 +129,9 @@ export async function activateAccount(
     { phone, code, newPin },
   );
   await saveTokens(data.data.tokens);
-  await SecureStore.setItemAsync(
-    STORAGE_KEYS.USER,
-    JSON.stringify(data.data.user),
-  );
+  // Store only sanitized user fields
+  const safeUser = sanitizeUserForStorage(data.data.user);
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(safeUser));
   return data.data;
 }
 
@@ -174,7 +171,9 @@ export async function logout(): Promise<void> {
 
 export async function getMe(): Promise<User> {
   const { data } = await apiClient.get<ApiResponse<User>>(AUTH_ENDPOINTS.ME);
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.data));
+  // Store only sanitized user fields
+  const safeUser = sanitizeUserForStorage(data.data);
+  await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(safeUser));
   return data.data;
 }
 

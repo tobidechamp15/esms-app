@@ -16,7 +16,18 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Ventry uses the camera to scan visitor QR codes at the estate gate.",
         "NSPhotoLibraryUsageDescription": "Ventry needs access to your photos to attach images to concern reports.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -28,7 +39,8 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.VIBRATE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC"
       ]
     },
     "web": {
@@ -61,7 +73,22 @@
       "expo-secure-store",
       "expo-font",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "expo-tracking-transparency",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableHermes": true,
+            "usesCleartextTraffic": false
+          },
+          "ios": {
+            "useFrameworks": "static",
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

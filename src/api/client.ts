@@ -24,7 +24,16 @@ export async function getStoredTokens(): Promise<AuthTokens | null> {
       SecureStore.getItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
     ]);
     if (!accessToken || !refreshToken || !expiresAtStr) return null;
-    return { accessToken, refreshToken, expiresAt: Number(expiresAtStr) };
+
+    const expiresAt = Number(expiresAtStr);
+
+    // Staleness check: reject tokens that are already expired at the storage level
+    if (Date.now() > expiresAt) {
+      await clearTokens();
+      return null;
+    }
+
+    return { accessToken, refreshToken, expiresAt };
   } catch {
     return null;
   }
@@ -48,7 +57,7 @@ export async function clearTokens(): Promise<void> {
     SecureStore.deleteItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
     SecureStore.deleteItemAsync(STORAGE_KEYS.USER),
     SecureStore.deleteItemAsync(STORAGE_KEYS.OTP_TOKEN),
-    SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH), // ← add this
+    SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH),
   ]);
 }
 
@@ -145,7 +154,7 @@ apiClient.interceptors.response.use(
           { refreshToken: tokens.refreshToken },
         );
 
-        const newTokens = data.data.tokens; // ← unwrap the nested .tokens
+        const newTokens = data.data.tokens;
         await saveTokens(newTokens);
         flushQueue(null, newTokens.accessToken);
         originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;

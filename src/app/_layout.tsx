@@ -3,12 +3,18 @@ import "../global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SplashScreen, Stack } from "expo-router";
 import { useEffect, useState } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import { useAuthStore } from "@/store/authStore";
 import { registerPushToken } from "@/lib/push";
 import { PanicAlarmOverlay } from "@/components/security/PanicAlarmOverlay";
 import { AnimatedSplash } from "@/components/AnimatedSplash";
+import {
+  initializeAppSecurity,
+  onAppBackground,
+  onAppForeground,
+} from "@/utils/appSecurity";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,6 +47,32 @@ export default function RootLayout() {
 
   const [panicVisible, setPanicVisible] = useState(false);
   const [showSplash, setShowSplash] = useState(!hasPlayedSplash);
+
+  // Initialize app security on startup
+  useEffect(() => {
+    initializeAppSecurity().then((securityResult) => {
+      if (securityResult.deviceCompromised) {
+        console.warn(
+          "[Security] Running on compromised device:",
+          securityResult.warnings.join(", "),
+        );
+      }
+    });
+  }, []);
+
+  // Handle app state transitions for security (background/foreground)
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        onAppForeground();
+      } else if (nextState === "background") {
+        onAppBackground();
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppState);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     hydrate()

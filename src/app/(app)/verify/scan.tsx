@@ -6,6 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BackHeader, Button } from "@/components/ui";
 import { useVerifyCode } from "@/hooks/useQueries";
+import { validateQrData, createScanCooldown } from "@/utils/qrValidation";
+
+// 2-second cooldown between scans to prevent rapid-fire scanning
+const scanCooldown = createScanCooldown(2000);
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -15,12 +19,30 @@ export default function ScanScreen() {
   const lock = useRef(false);
 
   async function onScan({ data }: { data: string }) {
+    // Prevent concurrent scans
     if (lock.current) return;
+
+    // Enforce minimum interval between scans (rate limiting)
+    if (!scanCooldown.recordScan()) return;
+
     lock.current = true;
     setScanned(true);
 
-    // QR encodes the access code (qrCodeData === accessCode). Extract digits.
-    const code = (data.match(/\d{4,6}/)?.[0] ?? data).trim();
+    // Validate QR code data before sending to API
+    const validation = validateQrData(data);
+    if (!validation.valid) {
+      router.replace({
+        pathname: "/(app)/verify/result",
+        params: {
+          ok: "0",
+          error: validation.error ?? "Invalid QR code.",
+        },
+      });
+      return;
+    }
+
+    // Use extracted code from validation (safe, sanitized)
+    const code = validation.code;
 
     try {
       const result = await verify.mutateAsync({
