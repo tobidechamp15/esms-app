@@ -1,13 +1,14 @@
+import { useCallback } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useMarkRead, useNotifications } from "@/hooks/useQueries";
+import { useMarkRead, usePaginatedNotifications } from "@/hooks/useQueries";
 import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 import { SecurityNotifications } from "@/components/security/SecurityNotifications";
 import type { AppNotification } from "@/types";
@@ -71,6 +72,69 @@ function NotifCard({
   );
 }
 
+// ─── Skeleton Component ───────────────────────────────────────────────────────
+
+function SkeletonRow() {
+  return (
+    <View className="px-6 py-4 border-b border-border bg-white">
+      {/* Title skeleton */}
+      <View className="flex-row justify-between items-start mb-3">
+        <View className="h-4 w-28 rounded-md bg-gray-200" />
+        <View className="h-3 w-16 rounded-md bg-gray-100" />
+      </View>
+      {/* Body skeleton — 2 lines */}
+      <View className="h-3 w-full rounded-md bg-gray-100 mb-2" />
+      <View className="h-3 w-3/4 rounded-md bg-gray-100" />
+    </View>
+  );
+}
+
+function NotificationSkeleton() {
+  return (
+    <View className="flex-1 bg-white">
+      <View className="px-6 pt-6 pb-4 border-b border-border">
+        <View className="flex-row items-center gap-3">
+          <View className="h-8 w-36 rounded-md bg-gray-200" />
+          <View className="h-5 w-6 rounded-full bg-gray-200" />
+        </View>
+        <View className="h-3 w-64 rounded-md bg-gray-100 mt-3" />
+      </View>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <SkeletonRow key={i} />
+      ))}
+    </View>
+  );
+}
+
+// ─── Footer (loading more indicator) ──────────────────────────────────────────
+
+function ListFooter({
+  isFetching,
+  hasMore,
+}: {
+  isFetching: boolean;
+  hasMore: boolean;
+}) {
+  if (isFetching) {
+    return (
+      <View className="py-6 items-center">
+        <View className="flex-row items-center gap-3">
+          <ActivityIndicator size="small" color="#084BA3" />
+          <Text className="text-sm text-muted">Loading more...</Text>
+        </View>
+      </View>
+    );
+  }
+  if (!hasMore) {
+    return (
+      <View className="py-8 items-center">
+        <Text className="text-xs text-muted">— All caught up —</Text>
+      </View>
+    );
+  }
+  return <View className="h-4" />;
+}
+
 // ─── Notifications Screen ─────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
@@ -80,11 +144,38 @@ export default function NotificationsScreen() {
 }
 
 function ResidentNotifications() {
-  const { data, isLoading } = useNotifications();
+  const {
+    items: notifications,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refresh,
+    isError,
+  } = usePaginatedNotifications();
   const markRead = useMarkRead();
 
-  const notifications = data?.data ?? [];
   const unread = notifications.filter((n) => !n.isRead).length;
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: AppNotification }) => (
+      <NotifCard notif={item} onRead={() => markRead.mutate(item.id)} />
+    ),
+    [markRead],
+  );
+
+  const keyExtractor = useCallback((item: AppNotification) => item.id, []);
+
+  // Initial loading skeleton
+  if (isLoading) {
+    return <NotificationSkeleton />;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -104,11 +195,7 @@ function ResidentNotifications() {
         </Text>
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#1B4FD8" />
-        </View>
-      ) : notifications.length === 0 ? (
+      {notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center">
           <Text className="text-4xl mb-3">🔔</Text>
           <Text className="text-base font-semibold text-navy mb-1">
@@ -119,16 +206,34 @@ function ResidentNotifications() {
           </Text>
         </View>
       ) : (
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {notifications.map((n) => (
-            <NotifCard
-              key={n.id}
-              notif={n}
-              onRead={() => markRead.mutate(n.id)}
-            />
-          ))}
-          <View className="h-8" />
-        </ScrollView>
+        <FlatList
+          data={notifications}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
+          onRefresh={refresh}
+          refreshing={false}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <ListFooter isFetching={isFetchingNextPage} hasMore={hasNextPage} />
+          }
+          contentContainerStyle={{ paddingBottom: 8 }}
+        />
+      )}
+
+      {isError && notifications.length === 0 && (
+        <View className="absolute inset-0 items-center justify-center bg-white/80">
+          <Text className="text-danger text-sm font-medium mb-2">
+            Couldn't load notifications
+          </Text>
+          <Pressable
+            onPress={() => refresh()}
+            className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center"
+          >
+            <Text className="text-white text-sm font-medium">Retry</Text>
+          </Pressable>
+        </View>
       )}
     </SafeAreaView>
   );

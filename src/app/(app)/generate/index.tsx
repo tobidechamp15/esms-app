@@ -1,13 +1,11 @@
 import * as Clipboard from "expo-clipboard";
-import * as Sharing from "expo-sharing";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Modal,
   Platform,
   Pressable,
   ScrollView,
-  Share,
   Text,
   TextInput,
   ToastAndroid,
@@ -18,7 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui";
 import { Copy, QrCode, X } from "@/components/ui/Icons";
+import VisitShareCard, {
+  type VisitShareCardRef,
+} from "@/components/visits/VisitShareCard";
 import { useCreateVisit } from "@/hooks/useQueries";
+import { ESTATE_NAME } from "@/constants/api";
 import type { Visit } from "@/types";
 import { notify } from "@/lib/notify";
 
@@ -93,11 +95,10 @@ function AccessCodeModal({
   onClose: () => void;
 }) {
   const [showQr, setShowQr] = useState(false);
+  const shareCardRef = useRef<VisitShareCardRef>(null);
 
   async function handleShare() {
-    await Share.share({
-      message: `Your Ventry access code: ${visit.accessCode}\nVisitor: ${visit.visitorName}\nDate: ${formatDateDisplay(visitDate)}\nArrival: ${formatTimeDisplay(arrivalTime)}\n\nValid for 3 hours from arrival time.`,
-    });
+    await shareCardRef.current?.share();
   }
   const { toast, showToast } = useToast();
 
@@ -184,6 +185,18 @@ function AccessCodeModal({
           </Text>
         </Pressable>
       </View>
+
+      {/* Hidden share card — captured as image when sharing */}
+      <VisitShareCard
+        ref={shareCardRef}
+        accessCode={visit.accessCode}
+        qrCodeData={visit.qrCodeData}
+        visitorName={visit.visitorName}
+        visitDate={toDateString(visitDate)}
+        arrivalTime={toTimeString(arrivalTime)}
+        estateName={ESTATE_NAME}
+      />
+
       {toast && (
         <View
           style={{

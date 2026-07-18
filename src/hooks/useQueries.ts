@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   createVisit,
@@ -8,20 +13,25 @@ import {
   getUpcomingVisits,
   revokeVisit,
   verifyAccessCode,
-} from '@/api/visits';
+} from "@/api/visits";
 import {
   getNotifications,
   getUnreadCount,
   markNotificationRead,
-} from '@/api/notifications';
+} from "@/api/notifications";
 import {
   deleteAccount,
   getNotificationPreferences,
   submitConcern,
   updateNotificationPreferences,
   updateProfile,
-} from '@/api/users';
-import type { CreateVisitPayload } from '@/types';
+} from "@/api/users";
+import type {
+  AppNotification,
+  CreateVisitPayload,
+  PaginatedResponse,
+  Visit,
+} from "@/types";
 import {
   generateActivationCode,
   generateResetCode,
@@ -35,18 +45,18 @@ import {
   getConcerns,
   getConcern,
   type AccountStatusAction,
-} from '@/api/security';
+} from "@/api/security";
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
 export const queryKeys = {
-  todayVisits:    ['visits', 'today']                   as const,
-  upcomingVisits: ['visits', 'upcoming']                as const,
-  pastVisits:     ['visits', 'past']                    as const,
-  todayStats:     ['visits', 'stats', 'today']          as const,
-  notifications:  ['notifications']                     as const,
-  unreadCount:    ['notifications', 'unread']           as const,
-  notifPrefs:     ['user', 'notification-preferences']  as const,
+  todayVisits: ["visits", "today"] as const,
+  upcomingVisits: ["visits", "upcoming"] as const,
+  pastVisits: ["visits", "past"] as const,
+  todayStats: ["visits", "stats", "today"] as const,
+  notifications: ["notifications"] as const,
+  unreadCount: ["notifications", "unread"] as const,
+  notifPrefs: ["user", "notification-preferences"] as const,
 };
 
 // ─── Visit Hooks ──────────────────────────────────────────────────────────────
@@ -63,7 +73,7 @@ export function useTodayVisits() {
 export function useUpcomingVisits() {
   return useQuery({
     queryKey: queryKeys.upcomingVisits,
-    queryFn: getUpcomingVisits,
+    queryFn: () => getUpcomingVisits(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -71,10 +81,63 @@ export function useUpcomingVisits() {
 
 export function usePastVisits(search?: string) {
   return useQuery({
-    queryKey: [...queryKeys.pastVisits, search ?? ''],
+    queryKey: [...queryKeys.pastVisits, search ?? ""],
     queryFn: () => getPastVisits({ search }),
     staleTime: 60_000,
   });
+}
+
+/** Paginated past visits — loads 5 per page, infinite scroll via fetchNextPage() */
+export function usePaginatedPastVisits(search?: string) {
+  const query = useInfiniteQuery<PaginatedResponse<Visit>>({
+    queryKey: [...queryKeys.pastVisits, "paginated", search ?? ""],
+    queryFn: ({ pageParam }) =>
+      getPastVisits({ search, page: pageParam as number, limit: 5 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 60_000,
+  });
+
+  const items: Visit[] = query.data?.pages.flatMap((p) => p.data) ?? [];
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
+}
+
+/** Paginated upcoming visits — loads 5 per page, infinite scroll via fetchNextPage() */
+export function usePaginatedUpcomingVisits() {
+  const query = useInfiniteQuery<PaginatedResponse<Visit>>({
+    queryKey: [...queryKeys.upcomingVisits, "paginated"],
+    queryFn: ({ pageParam }) =>
+      getUpcomingVisits({ page: pageParam as number, limit: 5 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const items: Visit[] = query.data?.pages.flatMap((p) => p.data) ?? [];
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
 }
 
 export function useTodayStats() {
@@ -123,6 +186,43 @@ export function useNotifications(page = 1) {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+}
+
+const NOTIF_PAGE_SIZE = 5;
+
+/**
+ * Paginated notifications hook using useInfiniteQuery with skeleton-ready state.
+ * Loads 5 items per page, fetches more on demand via fetchNextPage().
+ */
+export function usePaginatedNotifications() {
+  const query = useInfiniteQuery<PaginatedResponse<AppNotification>>({
+    queryKey: [...queryKeys.notifications, "paginated"],
+    queryFn: ({ pageParam }) =>
+      getNotifications(pageParam as number, NOTIF_PAGE_SIZE),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  // Flatten all pages into a single list
+  const items: AppNotification[] =
+    query.data?.pages.flatMap((p) => p.data) ?? [];
+  const total = query.data?.pages[0]?.meta?.total ?? 0;
+
+  return {
+    items,
+    total,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
 }
 
 export function useUnreadCount() {
@@ -189,7 +289,7 @@ export function useSubmitConcern() {
 
 export function useActivityLogs(userId?: string) {
   return useQuery({
-    queryKey: ['activity-logs', userId ?? 'all'],
+    queryKey: ["activity-logs", userId ?? "all"],
     queryFn: () => getActivityLogs({ userId }),
     staleTime: 30_000,
   });
@@ -197,7 +297,7 @@ export function useActivityLogs(userId?: string) {
 
 export function useAnnouncements(page = 1) {
   return useQuery({
-    queryKey: ['announcements', page],
+    queryKey: ["announcements", page],
     queryFn: () => getAnnouncements(page),
     staleTime: 30_000,
   });
@@ -208,14 +308,16 @@ export function useCreateAnnouncement() {
   return useMutation({
     mutationFn: createAnnouncement,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['announcements'] });
+      qc.invalidateQueries({ queryKey: ["announcements"] });
       qc.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
 }
 
 export function useGenerateResetCode() {
-  return useMutation({ mutationFn: (userId: string) => generateResetCode(userId) });
+  return useMutation({
+    mutationFn: (userId: string) => generateResetCode(userId),
+  });
 }
 
 export function useGenerateActivationCode() {
@@ -225,18 +327,30 @@ export function useGenerateActivationCode() {
 export function useUpdateAccountStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, action, pin }: { userId: string; action: AccountStatusAction; pin: string }) =>
-      updateAccountStatus(userId, action, pin),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['directory'] }),
+    mutationFn: ({
+      userId,
+      action,
+      pin,
+    }: {
+      userId: string;
+      action: AccountStatusAction;
+      pin: string;
+    }) => updateAccountStatus(userId, action, pin),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["directory"] }),
   });
 }
 
 export function useTransferAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ targetUserId, pin }: { targetUserId: string; pin: string }) =>
-      transferAdmin(targetUserId, pin),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['directory'] }),
+    mutationFn: ({
+      targetUserId,
+      pin,
+    }: {
+      targetUserId: string;
+      pin: string;
+    }) => transferAdmin(targetUserId, pin),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["directory"] }),
   });
 }
 
@@ -247,15 +361,20 @@ export function usePanic() {
 export function useUpdateConcernStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'submitted' | 'under_review' | 'resolved' }) =>
-      updateConcernStatus(id, status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['concerns'] }),
+    mutationFn: ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "submitted" | "under_review" | "resolved";
+    }) => updateConcernStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["concerns"] }),
   });
 }
 
 export function useConcerns(status?: string) {
   return useQuery({
-    queryKey: ['concerns', status ?? 'all'],
+    queryKey: ["concerns", status ?? "all"],
     queryFn: () => getConcerns({ status }),
     staleTime: 30_000,
   });
@@ -263,7 +382,7 @@ export function useConcerns(status?: string) {
 
 export function useConcern(id: string) {
   return useQuery({
-    queryKey: ['concern', id],
+    queryKey: ["concern", id],
     queryFn: () => getConcern(id),
     enabled: Boolean(id),
   });
