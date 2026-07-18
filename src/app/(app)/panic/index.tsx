@@ -2,21 +2,34 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useIsFocused } from "@react-navigation/native";
 
 import { ChevronLeft } from "@/components/ui/Icons";
 import { usePanic } from "@/hooks/useQueries";
 import { PanicAlarmOverlay } from "@/components/security/PanicAlarmOverlay";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 
 const COUNTDOWN = 10;
 
 export default function PanicScreen() {
   const router = useRouter();
   const panic = usePanic();
+  const isSecurity = useAuthStore(selectIsSecurity);
+  const isFocused = useIsFocused();
 
   const [seconds, setSeconds] = useState(COUNTDOWN);
   const [fired, setFired] = useState(false);
   const firedRef = useRef(false);
   const pulse = useRef(new Animated.Value(1)).current;
+
+  // Reset countdown state when screen gains focus
+  useEffect(() => {
+    if (isFocused) {
+      setSeconds(COUNTDOWN);
+      setFired(false);
+      firedRef.current = false;
+    }
+  }, [isFocused]);
 
   // Pulsing ring animation
   useEffect(() => {
@@ -54,7 +67,11 @@ export default function PanicScreen() {
 
   function cancel() {
     firedRef.current = true; // stop any pending fire
-    router.back();
+    if (isSecurity) {
+      router.replace("/(app)/verify");
+    } else {
+      router.replace("/(app)/home");
+    }
   }
 
   // After firing, the officer sees the same full-screen alarm; acknowledging returns home.
@@ -64,7 +81,10 @@ export default function PanicScreen() {
         visible
         title="EMERGENCY ALERT ACTIVE"
         body="You raised an emergency alert. All residents and officers have been notified."
-        onAcknowledge={() => router.replace("/(app)/verify")}
+        onAcknowledge={() => {
+          setFired(false);
+          router.replace(isSecurity ? "/(app)/verify" : "/(app)/home");
+        }}
       />
     );
   }

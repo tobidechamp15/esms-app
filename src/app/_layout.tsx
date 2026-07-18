@@ -8,8 +8,12 @@ import * as Notifications from "expo-notifications";
 import { useAuthStore } from "@/store/authStore";
 import { registerPushToken } from "@/lib/push";
 import { PanicAlarmOverlay } from "@/components/security/PanicAlarmOverlay";
+import { AnimatedSplash } from "@/components/AnimatedSplash";
 
 SplashScreen.preventAutoHideAsync();
+
+// Module-scoped: true only on a genuine cold start (resets when the JS context is destroyed).
+let hasPlayedSplash = false;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +40,7 @@ export default function RootLayout() {
   const isLoading = useAuthStore((s) => s.isLoading);
 
   const [panicVisible, setPanicVisible] = useState(false);
+  const [showSplash, setShowSplash] = useState(!hasPlayedSplash);
 
   useEffect(() => {
     hydrate()
@@ -48,7 +53,7 @@ export default function RootLayout() {
   // Raise the full-screen alarm when a panic push arrives or is tapped.
   useEffect(() => {
     const isPanic = (n: any) =>
-      n?.request?.content?.data?.type === 'panic_alert';
+      n?.request?.content?.data?.type === "panic_alert";
 
     const recv = Notifications.addNotificationReceivedListener((n) => {
       if (isPanic(n)) setPanicVisible(true);
@@ -71,6 +76,14 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
+        {showSplash && (
+          <AnimatedSplash
+            onFinish={() => {
+              hasPlayedSplash = true;
+              setShowSplash(false);
+            }}
+          />
+        )}
         <PanicAlarmOverlay
           visible={panicVisible}
           onAcknowledge={() => setPanicVisible(false)}

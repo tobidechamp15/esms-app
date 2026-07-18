@@ -9,7 +9,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useActivityLogs, useAnnouncements, useConcerns } from "@/hooks/useQueries";
+import {
+  useActivityLogs,
+  useAnnouncements,
+  useConcerns,
+} from "@/hooks/useQueries";
 
 type Tab = "activity" | "reports" | "announcements";
 
@@ -46,22 +50,34 @@ export function SecurityNotifications() {
 
       {/* Tabs */}
       <View className="flex-row px-6 gap-2 mb-4">
-        {([["activity", "Activity"], ["reports", "Reports"], ["announcements", "Announcements"]] as [Tab, string][]).map(
-          ([key, label]) => (
-            <Pressable
-              key={key}
-              onPress={() => setTab(key)}
-              className={`flex-1 h-9 rounded-2xl items-center justify-center ${
-                tab === key ? "bg-[#084BA3]" : "bg-white border border-border"
-              }`}
+        {(
+          [
+            ["activity", "Activity"],
+            ["reports", "Reports"],
+            ["announcements", "Announcements"],
+          ] as [Tab, string][]
+        ).map(([key, label]) => (
+          <Pressable
+            key={key}
+            onPress={() => setTab(key)}
+            className={`flex-1 h-9 rounded-2xl items-center justify-center ${
+              tab === key ? "bg-[#084BA3]" : "bg-white border border-border"
+            }`}
+          >
+            <Text
+              className={`text-xs font-medium ${tab === key ? "text-white" : "text-muted"}`}
             >
-              <Text className={`text-xs font-medium ${tab === key ? "text-white" : "text-muted"}`}>{label}</Text>
-            </Pressable>
-          ),
-        )}
+              {label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
-      <ScrollView className="flex-1 px-6" contentContainerClassName="pb-10" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-6"
+        contentContainerClassName="pb-10"
+        showsVerticalScrollIndicator={false}
+      >
         {/* ACTIVITY */}
         {tab === "activity" && (
           <Section
@@ -71,9 +87,14 @@ export function SecurityNotifications() {
             emptyText="No activity recorded yet."
             onRetry={activity.refetch}
           >
-            {activity.data?.data.map((item) => (
-              <View key={item.id} className="bg-white border border-border rounded-2xl p-4 mb-2">
-                <Text className="text-navy text-sm font-medium">{item.description}</Text>
+            {activity.data?.data.map((item, index) => (
+              <View
+                key={index}
+                className="bg-white border border-border rounded-2xl p-4 mb-2"
+              >
+                <Text className="text-navy text-sm font-medium">
+                  {item.description}
+                </Text>
                 <Text className="text-muted text-xs mt-1">
                   {item.actorName} · {timeAgo(item.createdAt)}
                 </Text>
@@ -94,17 +115,28 @@ export function SecurityNotifications() {
             {reports.data?.data.map((c) => (
               <Pressable
                 key={c.id}
-                onPress={() => router.push({ pathname: "/(app)/notifications/report" as any, params: { id: c.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(app)/notifications/report" as any,
+                    params: { id: c.id },
+                  })
+                }
                 className="bg-white border border-border rounded-2xl p-4 mb-2"
               >
                 <View className="flex-row justify-between items-start">
-                  <Text className="text-navy text-sm font-semibold flex-1 pr-2" numberOfLines={1}>
+                  <Text
+                    className="text-navy text-sm font-semibold flex-1 pr-2"
+                    numberOfLines={1}
+                  >
                     {c.subject}
                   </Text>
                   <StatusPill status={c.status} />
                 </View>
                 <Text className="text-muted text-xs mt-1">
-                  {c.resident ? `${c.resident.firstName ?? ""} ${c.resident.lastName ?? ""}`.trim() : "Resident"} · {timeAgo(c.createdAt)}
+                  {c.resident
+                    ? `${c.resident.firstName ?? ""} ${c.resident.lastName ?? ""}`.trim()
+                    : "Resident"}{" "}
+                  · {timeAgo(c.createdAt)}
                 </Text>
               </Pressable>
             ))}
@@ -121,11 +153,21 @@ export function SecurityNotifications() {
             onRetry={announcements.refetch}
           >
             {announcements.data?.data.map((a) => (
-              <View key={a.id} className="bg-white border border-border rounded-2xl p-4 mb-2">
-                <Text className="text-navy text-sm font-semibold">{a.subject}</Text>
-                <Text className="text-muted text-sm mt-1" numberOfLines={2}>{a.body}</Text>
+              <View
+                key={a.id}
+                className="bg-white border border-border rounded-2xl p-4 mb-2"
+              >
+                <Text className="text-navy text-sm font-semibold">
+                  {a.subject}
+                </Text>
+                <Text className="text-muted text-sm mt-1" numberOfLines={2}>
+                  {a.body}
+                </Text>
                 <Text className="text-muted text-xs mt-2">
-                  {a.type === "security_notice" ? "Security Notice" : "Estate Update"} · {a.authorName} · {timeAgo(a.createdAt)}
+                  {a.type === "security_notice"
+                    ? "Security Notice"
+                    : "Estate Update"}{" "}
+                  · {a.authorName} · {timeAgo(a.createdAt)}
                 </Text>
               </View>
             ))}
@@ -137,21 +179,37 @@ export function SecurityNotifications() {
 }
 
 function Section({
-  loading, error, empty, emptyText, onRetry, children,
+  loading,
+  error,
+  empty,
+  emptyText,
+  onRetry,
+  children,
 }: {
-  loading: boolean; error: boolean; empty: boolean; emptyText: string; onRetry: () => void; children: React.ReactNode;
+  loading: boolean;
+  error: boolean;
+  empty: boolean;
+  emptyText: string;
+  onRetry: () => void;
+  children: React.ReactNode;
 }) {
   if (loading) return <ActivityIndicator color="#1B4FD8" className="mt-8" />;
   if (error)
     return (
       <View className="items-center mt-8">
         <Text className="text-danger text-sm mb-2">Couldn't load</Text>
-        <Pressable onPress={onRetry} className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center">
+        <Pressable
+          onPress={onRetry}
+          className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center"
+        >
           <Text className="text-white text-sm font-medium">Retry</Text>
         </Pressable>
       </View>
     );
-  if (empty) return <Text className="text-muted text-sm text-center mt-8">{emptyText}</Text>;
+  if (empty)
+    return (
+      <Text className="text-muted text-sm text-center mt-8">{emptyText}</Text>
+    );
   return <>{children}</>;
 }
 
@@ -162,8 +220,12 @@ function StatusPill({ status }: { status: string }) {
     resolved: "bg-green-100 text-green-700",
   };
   return (
-    <View className={`px-2 py-0.5 rounded-full ${map[status]?.split(" ")[0] ?? "bg-gray-100"}`}>
-      <Text className={`text-[10px] font-semibold capitalize ${map[status]?.split(" ")[1] ?? "text-muted"}`}>
+    <View
+      className={`px-2 py-0.5 rounded-full ${map[status]?.split(" ")[0] ?? "bg-gray-100"}`}
+    >
+      <Text
+        className={`text-[10px] font-semibold capitalize ${map[status]?.split(" ")[1] ?? "text-muted"}`}
+      >
         {status.replace("_", " ")}
       </Text>
     </View>

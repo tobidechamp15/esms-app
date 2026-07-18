@@ -44,7 +44,7 @@ export default function RoleSelectScreen() {
               onPress={() => router.push("/(auth)/activate")}
               className="h-16 rounded-2xl items-center justify-center border border-white/40"
             >
-              <Text className="text-white text-base font-semibold">I'm Security</Text>
+              <Text className="text-white text-base font-semibold">I'm a Security</Text>
               <Text className="text-white/60 text-xs mt-0.5">
                 Verify visitors and manage estate access
               </Text>
