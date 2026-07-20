@@ -40,9 +40,6 @@ jobs:
   build:
     name: EAS ${{ github.event.inputs.profile || 'auto' }} (${{ github.event.inputs.platform || 'android' }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ventry_app
 
     steps:
       - name: 📥 Checkout repository
@@ -55,7 +52,6 @@ jobs:
 
       - name: 📦 Install dependencies
         run: npm ci
-        working-directory: ./ventry_app
 
       - name: 🔐 Setup Expo and EAS
         uses: expo/expo-github-action@v8
@@ -90,7 +86,6 @@ jobs:
             --profile ${{ steps.profile.outputs.profile }} \
             --non-interactive \
             --no-wait
-        working-directory: ./ventry_app
 
       - name: ✅ Build triggered
         run: |
