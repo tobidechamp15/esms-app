@@ -1,0 +1,102 @@
+name: EAS Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile (development, preview, production)"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+      platform:
+        description: "Platform to build for"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: EAS ${{ github.event.inputs.profile || 'auto' }} (${{ github.event.inputs.platform || 'android' }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ventry_app
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ./ventry_app/package-lock.json
+
+      - name: 📦 Install dependencies
+        run: npm ci
+        working-directory: ./ventry_app
+
+      - name: 🔐 Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🏗️ Determine build profile
+        id: profile
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+            echo "platform=${{ github.event.inputs.platform }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "profile=development" >> $GITHUB_OUTPUT
+            echo "platform=android" >> $GITHUB_OUTPUT
+          else
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "platform=android" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🚀 Run EAS Build
+        run: |
+          eas build \
+            --platform ${{ steps.profile.outputs.platform }} \
+            --profile ${{ steps.profile.outputs.profile }} \
+            --non-interactive \
+            --no-wait
+        working-directory: ./ventry_app
+
+      - name: ✅ Build triggered
+        run: |
+          echo "✅ EAS build triggered successfully!"
+          echo "   Profile: ${{ steps.profile.outputs.profile }}"
+          echo "   Platform: ${{ steps.profile.outputs.platform }}"
+          echo "   View builds: https://expo.dev/accounts/tobilobaemma04/projects/ventry/builds"
