@@ -29,10 +29,17 @@ export default function AnnounceScreen() {
   async function handlePost() {
     setError("");
     try {
-      await create.mutateAsync({ type, subject: subject.trim(), body: body.trim() });
-      router.back();
+      await create.mutateAsync({
+        type,
+        subject: subject.trim(),
+        body: body.trim(),
+      });
+      router.push("/(app)/notifications");
     } catch (err) {
-      setError((err as { message?: string })?.message ?? "Couldn't publish announcement.");
+      setError(
+        (err as { message?: string })?.message ??
+          "Couldn't publish announcement.",
+      );
     }
   }
 
@@ -46,24 +53,37 @@ export default function AnnounceScreen() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 24,
+          }}
           keyboardShouldPersistTaps="handled"
         >
           <Text className="text-sm font-medium text-navy mb-2">Type</Text>
           <View className="flex-row gap-3 mb-5">
-            {([["estate_update", "Estate Update"], ["security_notice", "Security Notice"]] as [AnnouncementType, string][]).map(
-              ([key, label]) => (
-                <Pressable
-                  key={key}
-                  onPress={() => setType(key)}
-                  className={`flex-1 h-11 rounded-2xl items-center justify-center ${
-                    type === key ? "bg-[#084BA3]" : "bg-surface border border-border"
-                  }`}
+            {(
+              [
+                ["estate_update", "Estate Update"],
+                ["security_notice", "Security Notice"],
+              ] as [AnnouncementType, string][]
+            ).map(([key, label]) => (
+              <Pressable
+                key={key}
+                onPress={() => setType(key)}
+                className={`flex-1 h-11 rounded-2xl items-center justify-center ${
+                  type === key
+                    ? "bg-[#084BA3]"
+                    : "bg-surface border border-border"
+                }`}
+              >
+                <Text
+                  className={`text-sm font-medium ${type === key ? "text-white" : "text-muted"}`}
                 >
-                  <Text className={`text-sm font-medium ${type === key ? "text-white" : "text-muted"}`}>{label}</Text>
-                </Pressable>
-              ),
-            )}
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
 
           <Text className="text-sm font-medium text-navy mb-2">Subject</Text>
@@ -90,7 +110,12 @@ export default function AnnounceScreen() {
         </ScrollView>
 
         <View className="px-6 pb-6">
-          <Button label="Publish Announcement" onPress={handlePost} disabled={!valid} loading={create.isPending} />
+          <Button
+            label="Publish Announcement"
+            onPress={handlePost}
+            disabled={!valid}
+            loading={create.isPending}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

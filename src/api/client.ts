@@ -105,6 +105,14 @@ let refreshQueue: Array<{
   reject: (err: unknown) => void;
 }> = [];
 
+// Optional callback invoked when token refresh fails (e.g. both tokens expired).
+// Register via setOnAuthFailure() to reset the auth store so the app redirects
+// to the login flow instead of continuing to make unauthorized requests.
+let _onAuthFailure: (() => void) | null = null;
+export function setOnAuthFailure(cb: () => void) {
+  _onAuthFailure = cb;
+}
+
 function flushQueue(error: unknown, token: string | null): void {
   refreshQueue.forEach(({ resolve, reject }) => {
     if (error) reject(error);
@@ -162,6 +170,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         flushQueue(refreshError, null);
         await clearTokens();
+        _onAuthFailure?.();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

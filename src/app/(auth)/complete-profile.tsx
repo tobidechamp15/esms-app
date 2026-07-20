@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,14 +9,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { getEstateStreets } from '@/api/auth';
-import { getOtpToken } from '@/api/client';
-import { BackHeader, Button } from '@/components/ui';
-import { ChevronRight } from '@/components/ui/Icons';
-import { useAuthStore } from '@/store/authStore';
+import { getEstateStreets } from "@/api/auth";
+import { getOtpToken } from "@/api/client";
+import { BackHeader, Button } from "@/components/ui";
+import { ChevronRight } from "@/components/ui/Icons";
+import { useAuthStore } from "@/store/authStore";
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -24,15 +24,15 @@ export default function CompleteProfileScreen() {
   const registerUser = useAuthStore((s) => s.registerUser);
   const isLoading = useAuthStore((s) => s.isLoading);
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [houseNumber, setHouseNumber] = useState('');
-  const [streetName, setStreetName] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [streetName, setStreetName] = useState("");
   const [showStreets, setShowStreets] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const { data: streets = [] } = useQuery({
-    queryKey: ['estate-streets'],
+    queryKey: ["estate-streets"],
     queryFn: getEstateStreets,
   });
 
@@ -40,25 +40,34 @@ export default function CompleteProfileScreen() {
 
   async function handleSubmit() {
     if (!isValid) return;
-    setError('');
+    setError("");
     try {
       const otpToken = await getOtpToken();
-      if (!otpToken) throw new Error('Session expired. Please start again.');
-      await registerUser({ firstName, lastName, houseNumber, streetName }, otpToken);
-      router.push('/(auth)/create-pin');
+      if (!otpToken) throw new Error("Session expired. Please start again.");
+      await registerUser(
+        { firstName, lastName, houseNumber, streetName },
+        otpToken,
+      );
+      router.push("/(auth)/create-pin");
     } catch (err) {
-      setError((err as { message?: string }).message ?? 'Registration failed.');
+      setError((err as { message?: string }).message ?? "Registration failed.");
     }
   }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <BackHeader title="Create Account"  onBack={() => router.back()}/>
+      <BackHeader
+        title="Create Account"
+        onBack={() => router.push("/(auth)/phone")}
+      />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <ScrollView className="flex-1 px-6 pt-8" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          className="flex-1 px-6 pt-8"
+          showsVerticalScrollIndicator={false}
+        >
           <Text className="text-2xl font-bold text-navy mb-1">
             Complete Your Profile
           </Text>
@@ -87,7 +96,9 @@ export default function CompleteProfileScreen() {
           />
 
           {/* House Number */}
-          <Text className="text-sm font-medium text-navy mb-2">House Number</Text>
+          <Text className="text-sm font-medium text-navy mb-2">
+            House Number
+          </Text>
           <TextInput
             value={houseNumber}
             onChangeText={setHouseNumber}
@@ -97,13 +108,17 @@ export default function CompleteProfileScreen() {
           />
 
           {/* Street Name dropdown */}
-          <Text className="text-sm font-medium text-navy mb-2">Street Name</Text>
+          <Text className="text-sm font-medium text-navy mb-2">
+            Street Name
+          </Text>
           <TouchableOpacity
             onPress={() => setShowStreets((s) => !s)}
             className="h-14 px-4 border border-border rounded-2xl flex-row items-center justify-between bg-surface mb-1"
           >
-            <Text className={`text-base ${streetName ? 'text-navy' : 'text-gray-400'}`}>
-              {streetName || 'Select your street'}
+            <Text
+              className={`text-base ${streetName ? "text-navy" : "text-gray-400"}`}
+            >
+              {streetName || "Select your street"}
             </Text>
             <ChevronRight size={18} />
           </TouchableOpacity>
@@ -113,7 +128,10 @@ export default function CompleteProfileScreen() {
               {streets.map((s) => (
                 <TouchableOpacity
                   key={s}
-                  onPress={() => { setStreetName(s); setShowStreets(false); }}
+                  onPress={() => {
+                    setStreetName(s);
+                    setShowStreets(false);
+                  }}
                   className="px-4 py-3 border-b border-border last:border-b-0"
                 >
                   <Text className="text-base text-navy">{s}</Text>
@@ -122,7 +140,9 @@ export default function CompleteProfileScreen() {
             </View>
           )}
 
-          {error ? <Text className="text-danger text-sm mb-4">{error}</Text> : null}
+          {error ? (
+            <Text className="text-danger text-sm mb-4">{error}</Text>
+          ) : null}
           <View className="h-8" />
         </ScrollView>
 

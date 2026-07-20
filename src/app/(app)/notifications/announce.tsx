@@ -155,7 +155,7 @@ export default function AnnounceScreen() {
         message="Your announcement has been shared with all residents."
         onClose={() => {
           setPublished(false);
-          router.back();
+          router.push("/(app)/notifications");
         }}
       />
     </SafeAreaView>

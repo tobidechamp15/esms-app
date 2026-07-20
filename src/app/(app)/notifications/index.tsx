@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   Text,
   View,
@@ -44,14 +45,14 @@ function typeLabel(type: AppNotification["type"]): string {
 
 function NotifCard({
   notif,
-  onRead,
+  onPress,
 }: {
   notif: AppNotification;
-  onRead: () => void;
+  onPress: () => void;
 }) {
   return (
     <Pressable
-      onPress={!notif.isRead ? onRead : undefined}
+      onPress={onPress}
       className={`px-6 py-4 border-b border-border ${
         !notif.isRead ? "bg-primary-50/60" : "bg-white"
       }`}
@@ -62,7 +63,9 @@ function NotifCard({
         </Text>
         <Text className="text-xs text-muted">{timeAgo(notif.createdAt)}</Text>
       </View>
-      <Text className="text-sm text-muted leading-5">{notif.body}</Text>
+      <Text className="text-sm text-muted leading-5">
+        <Text className="font-bold">{notif.visitorName}</Text> {notif.body}
+      </Text>
 
       {/* Unread dot */}
       {!notif.isRead && (
@@ -72,17 +75,78 @@ function NotifCard({
   );
 }
 
+// ─── Action Bottom Sheet ──────────────────────────────────────────────────────
+
+function NotificationActions({
+  notif,
+  visible,
+  onClose,
+  onMarkRead,
+}: {
+  notif: AppNotification | null;
+  visible: boolean;
+  onClose: () => void;
+  onMarkRead: () => void;
+}) {
+  if (!notif) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable className="flex-1 bg-black/40" onPress={onClose} />
+      <View className="bg-white rounded-t-3xl px-6 pt-5 pb-10">
+        {/* Header */}
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-xl font-bold text-navy">Notification</Text>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Text className="text-muted text-lg leading-none">✕</Text>
+          </Pressable>
+        </View>
+
+        {/* Preview */}
+        <View className="bg-primary-50/40 border border-primary-100 rounded-2xl p-4 mb-6">
+          <Text className="text-xs font-bold text-primary-500 mb-1">
+            {typeLabel(notif.type)}
+          </Text>
+          <Text className="text-sm text-muted leading-5">
+            <Text className="font-bold text-navy">{notif.visitorName}</Text>{" "}
+            {notif.body}
+          </Text>
+          <Text className="text-xs text-muted mt-2">
+            {timeAgo(notif.createdAt)}
+          </Text>
+        </View>
+
+        {/* Mark as read */}
+        {!notif.isRead && (
+          <Pressable
+            onPress={() => {
+              onMarkRead();
+              onClose();
+            }}
+            className="h-14 border border-border rounded-2xl items-center justify-center mb-3"
+          >
+            <Text className="text-navy font-semibold">Mark as Read</Text>
+          </Pressable>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Skeleton Component ───────────────────────────────────────────────────────
 
 function SkeletonRow() {
   return (
     <View className="px-6 py-4 border-b border-border bg-white">
-      {/* Title skeleton */}
       <View className="flex-row justify-between items-start mb-3">
         <View className="h-4 w-28 rounded-md bg-gray-200" />
         <View className="h-3 w-16 rounded-md bg-gray-100" />
       </View>
-      {/* Body skeleton — 2 lines */}
       <View className="h-3 w-full rounded-md bg-gray-100 mb-2" />
       <View className="h-3 w-3/4 rounded-md bg-gray-100" />
     </View>
@@ -106,7 +170,7 @@ function NotificationSkeleton() {
   );
 }
 
-// ─── Footer (loading more indicator) ──────────────────────────────────────────
+// ─── Footer ───────────────────────────────────────────────────────────────────
 
 function ListFooter({
   isFetching,
@@ -155,6 +219,11 @@ function ResidentNotifications() {
   } = usePaginatedNotifications();
   const markRead = useMarkRead();
 
+  const [selectedNotif, setSelectedNotif] = useState<AppNotification | null>(
+    null,
+  );
+  const [sheetVisible, setSheetVisible] = useState(false);
+
   const unread = notifications.filter((n) => !n.isRead).length;
 
   const handleEndReached = useCallback(() => {
@@ -163,16 +232,30 @@ function ResidentNotifications() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const openSheet = useCallback((notif: AppNotification) => {
+    setSelectedNotif(notif);
+    setSheetVisible(true);
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    setSheetVisible(false);
+    setSelectedNotif(null);
+  }, []);
+
+  const handleMarkRead = useCallback(() => {
+    if (!selectedNotif || selectedNotif.isRead) return;
+    markRead.mutate(selectedNotif.id);
+  }, [selectedNotif, markRead]);
+
   const renderItem = useCallback(
     ({ item }: { item: AppNotification }) => (
-      <NotifCard notif={item} onRead={() => markRead.mutate(item.id)} />
+      <NotifCard notif={item} onPress={() => openSheet(item)} />
     ),
-    [markRead],
+    [openSheet],
   );
 
   const keyExtractor = useCallback((item: AppNotification) => item.id, []);
 
-  // Initial loading skeleton
   if (isLoading) {
     return <NotificationSkeleton />;
   }
@@ -235,6 +318,14 @@ function ResidentNotifications() {
           </Pressable>
         </View>
       )}
+
+      {/* Action bottom sheet */}
+      <NotificationActions
+        notif={selectedNotif}
+        visible={sheetVisible}
+        onClose={closeSheet}
+        onMarkRead={handleMarkRead}
+      />
     </SafeAreaView>
   );
 }

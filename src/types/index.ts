@@ -110,6 +110,7 @@ export interface AppNotification {
   type: NotificationType;
   title: string;
   body: string;
+  visitorName: string;
   isRead: boolean;
   createdAt: string;
 }

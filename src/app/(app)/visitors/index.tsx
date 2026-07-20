@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 
 import { Copy, Search, ShareIcon, X } from "@/components/ui/Icons";
 import VisitShareCard, {
@@ -18,9 +19,12 @@ import VisitShareCard, {
 import {
   usePaginatedPastVisits,
   usePaginatedUpcomingVisits,
+  usePaginatedAllPastVisits,
+  usePaginatedAllUpcomingVisits,
   useRevokeVisit,
 } from "@/hooks/useQueries";
 import { ESTATE_NAME } from "@/constants/api";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 import type { Visit, VisitStatus } from "@/types";
 
 type Tab = "past" | "upcoming";
@@ -41,7 +45,7 @@ function statusLabel(status: VisitStatus): string {
     checked_in: "Visitor Arrived",
     checked_out: "Visitor Left",
     cancelled: "Cancelled",
-    expired: "Code has expired",
+    expired: "Code Expired",
     revoked: "Access Removed",
   };
   return map[status];
@@ -272,15 +276,24 @@ function RemoveModal({
 // ─── Visitors Screen ──────────────────────────────────────────────────────────
 
 export default function VisitorsScreen() {
-  const [tab, setTab] = useState<Tab>("past");
+  const isSecurity = useAuthStore(selectIsSecurity);
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(
+    initialTab === "upcoming" ? "upcoming" : "past",
+  );
   const [search, setSearch] = useState("");
   const [removeTarget, setRemoveTarget] = useState<Visit | null>(null);
   const [didRemove, setDidRemove] = useState(false);
   const [sharingVisit, setSharingVisit] = useState<Visit | null>(null);
   const shareCardRef = useRef<VisitShareCardRef>(null);
 
-  const past = usePaginatedPastVisits(search);
-  const upcoming = usePaginatedUpcomingVisits();
+  // Security sees ALL estate visits; residents see only their own
+  const past = isSecurity
+    ? usePaginatedAllPastVisits(search)
+    : usePaginatedPastVisits(search);
+  const upcoming = isSecurity
+    ? usePaginatedAllUpcomingVisits()
+    : usePaginatedUpcomingVisits();
 
   const revokeVisit = useRevokeVisit();
 
@@ -327,7 +340,13 @@ export default function VisitorsScreen() {
       {/* Header */}
       <View className="px-6 pt-6 pb-3">
         <Text className="text-2xl font-bold text-navy">
-          {tab === "past" ? "Past Visitors" : "All Upcoming Visits"}
+          {isSecurity
+            ? tab === "past"
+              ? "Estate Past Visits"
+              : "Estate Upcoming Visits"
+            : tab === "past"
+              ? "Past Visitors"
+              : "All Upcoming Visits"}
         </Text>
       </View>
 

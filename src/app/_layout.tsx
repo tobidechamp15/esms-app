@@ -2,6 +2,7 @@ import "../global.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SplashScreen, Stack } from "expo-router";
+import { setOnAuthFailure } from "@/api/client";
 import { useEffect, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -72,6 +73,26 @@ export default function RootLayout() {
 
     const subscription = AppState.addEventListener("change", handleAppState);
     return () => subscription.remove();
+  }, []);
+
+  // Register auth-failure handler: when token refresh fails (e.g. both tokens
+  // expired), reset the zustand store so the app redirects to the auth flow
+  // instead of looping 401s forever.
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      const state = useAuthStore.getState();
+      // Only reset if the store thinks we're still authenticated — avoids
+      // double-triggering if logoutUser() was already called.
+      if (state.user || state.tokens) {
+        state.setUser(null as any);
+        useAuthStore.setState({
+          tokens: null,
+          isPinSet: false,
+          isPinVerified: false,
+          error: null,
+        });
+      }
+    });
   }, []);
 
   useEffect(() => {

@@ -55,6 +55,7 @@ export async function getPastVisits(
       params: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
+        // Backend expects a comma-separated string, which the schema splits into an array
         status: [
           "scheduled",
           "checked_in",
@@ -62,7 +63,7 @@ export async function getPastVisits(
           "cancelled",
           "expired",
           "revoked",
-        ],
+        ].join(","),
         ...(params.search ? { search: params.search } : {}),
       },
     },
@@ -80,6 +81,26 @@ export async function getUpcomingVisits(
         page: params.page ?? 1,
         limit: params.limit ?? 10,
         status: "scheduled",
+        ...(params.search ? { search: params.search } : {}),
+      },
+    },
+  );
+  return data;
+}
+
+/**
+ * Get ALL visits (security/admin) — calls GET /api/v1/visits.
+ */
+export async function getAllVisits(
+  params: GetVisitsParams = {},
+): Promise<PaginatedResponse<Visit>> {
+  const { data } = await apiClient.get<PaginatedResponse<Visit>>(
+    VISIT_ENDPOINTS.BASE,
+    {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 20,
+        ...(params.status ? { status: params.status } : {}),
         ...(params.search ? { search: params.search } : {}),
       },
     },

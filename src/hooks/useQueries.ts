@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -7,6 +8,7 @@ import {
 
 import {
   createVisit,
+  getAllVisits,
   getPastVisits,
   getTodayStats,
   getTodayVisits,
@@ -45,7 +47,26 @@ import {
   getConcerns,
   getConcern,
   type AccountStatusAction,
+  type ActivityLogItem,
+  type Announcement,
+  type Concern,
 } from "@/api/security";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Deduplicate items by `id` to prevent duplicate-key React errors when
+ *  paginated data contains overlapping entries across pages. */
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      out.push(item);
+    }
+  }
+  return out;
+}
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -53,6 +74,8 @@ export const queryKeys = {
   todayVisits: ["visits", "today"] as const,
   upcomingVisits: ["visits", "upcoming"] as const,
   pastVisits: ["visits", "past"] as const,
+  allPastVisits: ["visits", "all", "past"] as const,
+  allUpcomingVisits: ["visits", "all", "upcoming"] as const,
   todayStats: ["visits", "stats", "today"] as const,
   notifications: ["notifications"] as const,
   unreadCount: ["notifications", "unread"] as const,
@@ -101,7 +124,10 @@ export function usePaginatedPastVisits(search?: string) {
     staleTime: 60_000,
   });
 
-  const items: Visit[] = query.data?.pages.flatMap((p) => p.data) ?? [];
+  const items: Visit[] = useMemo(
+    () => dedupeById(query.data?.pages.flatMap((p) => p.data) ?? []),
+    [query.data?.pages],
+  );
   return {
     items,
     isLoading: query.isLoading,
@@ -128,7 +154,85 @@ export function usePaginatedUpcomingVisits() {
     refetchInterval: 60_000,
   });
 
-  const items: Visit[] = query.data?.pages.flatMap((p) => p.data) ?? [];
+  const items: Visit[] = useMemo(
+    () => dedupeById(query.data?.pages.flatMap((p) => p.data) ?? []),
+    [query.data?.pages],
+  );
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
+}
+
+/** Paginated ALL past visits (security) — loads 8 per page, infinite scroll */
+export function usePaginatedAllPastVisits(search?: string) {
+  const query = useInfiniteQuery<PaginatedResponse<Visit>>({
+    queryKey: [...queryKeys.allPastVisits, search ?? ""],
+    queryFn: ({ pageParam }) =>
+      getAllVisits({
+        search,
+        page: pageParam as number,
+        limit: 8,
+        status: [
+          "scheduled",
+          "checked_in",
+          "checked_out",
+          "cancelled",
+          "expired",
+          "revoked",
+        ].join(","),
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 60_000,
+  });
+
+  const items: Visit[] = useMemo(
+    () => dedupeById(query.data?.pages.flatMap((p) => p.data) ?? []),
+    [query.data?.pages],
+  );
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
+}
+
+/** Paginated ALL upcoming visits (security) — loads 8 per page, infinite scroll */
+export function usePaginatedAllUpcomingVisits() {
+  const query = useInfiniteQuery<PaginatedResponse<Visit>>({
+    queryKey: queryKeys.allUpcomingVisits,
+    queryFn: ({ pageParam }) =>
+      getAllVisits({
+        page: pageParam as number,
+        limit: 8,
+        status: "scheduled",
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const items: Visit[] = useMemo(
+    () => dedupeById(query.data?.pages.flatMap((p) => p.data) ?? []),
+    [query.data?.pages],
+  );
   return {
     items,
     isLoading: query.isLoading,
@@ -295,12 +399,63 @@ export function useActivityLogs(userId?: string) {
   });
 }
 
+/** Paginated activity logs — 8 per page, infinite scroll */
+export function usePaginatedActivityLogs() {
+  const query = useInfiniteQuery<PaginatedResponse<ActivityLogItem>>({
+    queryKey: ["activity-logs", "paginated"],
+    queryFn: ({ pageParam }) =>
+      getActivityLogs({ page: pageParam as number, limit: 8 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+  });
+
+  const items = query.data?.pages.flatMap((p) => p.data) ?? [];
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
+}
+
 export function useAnnouncements(page = 1) {
   return useQuery({
     queryKey: ["announcements", page],
     queryFn: () => getAnnouncements(page),
     staleTime: 30_000,
   });
+}
+
+/** Paginated announcements — 8 per page, infinite scroll */
+export function usePaginatedAnnouncements() {
+  const query = useInfiniteQuery<PaginatedResponse<Announcement>>({
+    queryKey: ["announcements", "paginated"],
+    queryFn: ({ pageParam }) => getAnnouncements(pageParam as number, 8),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+  });
+
+  const items = query.data?.pages.flatMap((p) => p.data) ?? [];
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
 }
 
 export function useCreateAnnouncement() {
@@ -378,6 +533,32 @@ export function useConcerns(status?: string) {
     queryFn: () => getConcerns({ status }),
     staleTime: 30_000,
   });
+}
+
+/** Paginated concerns/reports — 8 per page, infinite scroll */
+export function usePaginatedConcerns(status?: string) {
+  const query = useInfiniteQuery<PaginatedResponse<Concern>>({
+    queryKey: ["concerns", "paginated", status ?? "all"],
+    queryFn: ({ pageParam }) =>
+      getConcerns({ status, page: pageParam as number, limit: 8 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 30_000,
+  });
+
+  const items = query.data?.pages.flatMap((p) => p.data) ?? [];
+  return {
+    items,
+    isLoading: query.isLoading,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: !!query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refresh: query.refetch,
+    isError: query.isError,
+  };
 }
 
 export function useConcern(id: string) {

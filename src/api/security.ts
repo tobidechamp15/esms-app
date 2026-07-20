@@ -102,6 +102,7 @@ export async function getActivityLogs(
   params: {
     userId?: string;
     page?: number;
+    limit?: number;
   } = {},
 ): Promise<PaginatedResponse<ActivityLogItem>> {
   const { data } = await apiClient.get<PaginatedResponse<ActivityLogItem>>(
@@ -109,6 +110,7 @@ export async function getActivityLogs(
     {
       params: {
         page: params.page ?? 1,
+        limit: params.limit ?? 20,
         ...(params.userId ? { userId: params.userId } : {}),
       },
     },
@@ -131,10 +133,11 @@ export interface Announcement {
 
 export async function getAnnouncements(
   page = 1,
+  limit = 20,
 ): Promise<PaginatedResponse<Announcement>> {
   const { data } = await apiClient.get<PaginatedResponse<Announcement>>(
     ANNOUNCEMENT_ENDPOINTS.BASE,
-    { params: { page } },
+    { params: { page, limit } },
   );
   return data;
 }
@@ -195,13 +198,14 @@ export interface Concern {
 }
 
 export async function getConcerns(
-  params: { status?: string; page?: number } = {},
+  params: { status?: string; page?: number; limit?: number } = {},
 ): Promise<PaginatedResponse<Concern>> {
   const { data } = await apiClient.get<PaginatedResponse<Concern>>(
     "/concerns",
     {
       params: {
         page: params.page ?? 1,
+        limit: params.limit ?? 20,
         ...(params.status ? { status: params.status } : {}),
       },
     },

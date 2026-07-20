@@ -95,6 +95,7 @@ export const NOTIFICATION_ENDPOINTS = {
   BASE: "/notifications",
   UNREAD_COUNT: "/notifications/unread-count",
   MARK_READ: (id: string) => `/notifications/${id}/read`,
+  BY_ID: (id: string) => `/notifications/${id}`,
 } as const;
 
 // ─── Users ────────────────────────────────────────────────────────────────────
