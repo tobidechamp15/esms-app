@@ -8,6 +8,8 @@
     "scheme": "ventry",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#0A1628"
     },
     "ios": {
@@ -51,10 +53,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0A1628",
-          "android": {
-            "imageWidth": 120
-          }
+          "image": "./assets/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0A1628"
         }
       ],
       [
