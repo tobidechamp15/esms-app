@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -45,3 +46,14 @@ example
 # Production env (contains real API URLs — keep out of public repos)
 .env.production
 .env.staging
+
+# Security - credential files and certificates
+*.keystore
+*.truststore
+certs/
+secrets/
+
+# Build artifacts - may contain source maps (potential reverse engineering)
+*.jsbundle
+*.sourcemap
+build/

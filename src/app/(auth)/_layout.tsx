@@ -1,6 +1,16 @@
 import { Stack } from "expo-router";
+import { useEffect } from "react";
+import * as ScreenCapture from "expo-screen-capture";
 
 export default function AuthLayout() {
+  // Prevent screen recording on all auth screens to protect PINs and personal data
+  useEffect(() => {
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, []);
+
   return (
     <Stack
       screenOptions={{ headerShown: false, animation: "slide_from_right" }}
@@ -17,7 +27,10 @@ export default function AuthLayout() {
         name="pin-lock"
         options={{ animation: "fade", gestureEnabled: false }}
       />
-      <Stack.Screen name="estate-verified" options={{ animation: 'fade', gestureEnabled: false }} />
+      <Stack.Screen
+        name="estate-verified"
+        options={{ animation: "fade", gestureEnabled: false }}
+      />
       <Stack.Screen name="forgot-pin" />
     </Stack>
   );

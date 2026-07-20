@@ -1,10 +1,13 @@
+// (app)/veriry/index.tsx
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,7 +39,10 @@ export default function VerifyHomeScreen() {
     if (code.length < 4) return;
     setError("");
     try {
-      const result = await verify.mutateAsync({ accessCode: code, action: "check_in" });
+      const result = await verify.mutateAsync({
+        accessCode: code,
+        action: "check_in",
+      });
       router.push({
         pathname: "/(app)/verify/result",
         params: {
@@ -51,7 +57,9 @@ export default function VerifyHomeScreen() {
         },
       });
     } catch (err) {
-      setError((err as { message?: string }).message ?? "Could not verify this code.");
+      setError(
+        (err as { message?: string }).message ?? "Could not verify this code.",
+      );
     }
   }
 
@@ -59,102 +67,137 @@ export default function VerifyHomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* ── Profile setup banner ── */}
-      {showBanner && (
-        <View className="flex-row items-center justify-between px-6 py-3 bg-surface border-b border-border">
-          <Text className="text-xs text-muted flex-1">
-            Please set up your{" "}
-            <Text
-              className="text-navy font-semibold underline"
-              onPress={() => router.push("/(auth)/complete-profile")}
-            >
-              profile
-            </Text>{" "}
-            so we can know you better!
-          </Text>
-          <Pressable onPress={() => setShowBanner(false)} hitSlop={10} className="ml-3">
-            <X size={16} color="#9CA3AF" />
-          </Pressable>
-        </View>
-      )}
-
-      {/* ── Header: greeting + red panic megaphone ── */}
-      <View className="flex-row items-center justify-between px-6 pt-5 pb-4 border-b border-border">
-        <View className="flex-1 pr-4">
-          <Text className="text-2xl font-bold text-navy">
-            {greeting}, {user?.firstName || "Officer"} ☀️
-          </Text>
-          <Text className="text-sm text-muted mt-1">{ESTATE_NAME}</Text>
-        </View>
-
-        {/* Panic megaphone → countdown screen (the 10s countdown is the misfire guard) */}
-        <Pressable onPress={() => router.push("/(app)/panic" as any)} hitSlop={8}>
-          <View className="w-14 h-14 rounded-full bg-danger items-center justify-center shadow">
-            <Text className="text-2xl">📢</Text>
-          </View>
-        </Pressable>
-      </View>
-
-      {/* ── Verify card ── */}
-      <View className="px-6 mt-6">
-        <View className="bg-white border border-border rounded-3xl p-6">
-          <Text className="text-lg font-bold text-navy mb-1">Verify Access Code</Text>
-          <Text className="text-sm text-muted mb-6">
-            Enter a visitor code or scan QR to verify access.
-          </Text>
-
-          {/* 5 underline cells (tapping focuses the hidden input) */}
-          <Pressable onPress={() => inputRef.current?.focus()} className="mb-6">
-            <View className="flex-row justify-between">
-              {cells.map((_, i) => (
-                <View key={i} className="items-center" style={{ width: 48 }}>
-                  <Text className="text-2xl font-bold text-navy h-9">
-                    {code[i] ?? ""}
-                  </Text>
-                  <View
-                    className="h-[2px] w-full"
-                    style={{ backgroundColor: i < code.length ? "#1B4FD8" : "#E5E7EB" }}
-                  />
-                </View>
-              ))}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1">
+          {/* ── Profile setup banner ── */}
+          {/* {showBanner && (
+            <View className="flex-row items-center justify-between px-6 py-3 bg-surface border-b border-border">
+              <Text className="text-xs text-muted flex-1">
+                Please set up your{" "}
+                <Text
+                  className="text-navy font-semibold underline"
+                  onPress={() => router.push("/(auth)/complete-profile")}
+                >
+                  profile
+                </Text>{" "}
+                so we can know you better!
+              </Text>
+              <Pressable onPress={() => setShowBanner(false)} hitSlop={10} className="ml-3">
+                <X size={16} color="#9CA3AF" />
+              </Pressable>
             </View>
-            {/* hidden input that actually captures digits */}
-            <TextInput
-              ref={inputRef}
-              value={code}
-              maxLength={CODE_LENGTH}
-              onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, CODE_LENGTH))}
-              keyboardType="number-pad"
-              autoFocus
-              style={{ position: "absolute", opacity: 0, height: 1, width: 1 }}
-            />
-          </Pressable>
+          )} */}
 
-          {error ? <Text className="text-danger text-sm mb-3 text-center">{error}</Text> : null}
+          {/* ── Header: greeting + red panic megaphone ── */}
+          <View className="flex-row items-center justify-between px-6 pt-5 pb-4 border-b border-border">
+            <View className="flex-1 pr-4">
+              <Text className="text-2xl font-bold text-navy">
+                {greeting}, {user?.firstName || "Officer"} ☀️
+              </Text>
+              <Text className="text-sm text-muted mt-1">{ESTATE_NAME}</Text>
+            </View>
 
-          <Pressable
-            onPress={handleVerify}
-            disabled={code.length < 4 || verify.isPending}
-            className={`h-14 rounded-2xl items-center justify-center mb-3 ${
-              code.length < 4 || verify.isPending ? "bg-primary-200" : "bg-[#084BA3]"
-            }`}
-          >
-            {verify.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white text-base font-semibold">Verify Code</Text>
-            )}
-          </Pressable>
+            {/* Panic megaphone → countdown screen (the 10s countdown is the misfire guard) */}
+            <Pressable
+              onPress={() => router.push("/(app)/panic" as any)}
+              hitSlop={8}
+            >
+              <View className="w-14 h-14 rounded-full bg-danger items-center justify-center shadow">
+                <Text className="text-2xl">📢</Text>
+              </View>
+            </Pressable>
+          </View>
 
-          <Pressable
-            onPress={() => router.push("/(app)/verify/scan")}
-            className="h-14 rounded-2xl items-center justify-center border border-border flex-row gap-2"
-          >
-            <QrCode size={18} color="#1B2A4A" />
-            <Text className="text-navy text-base font-semibold">Scan QR Code</Text>
-          </Pressable>
+          {/* ── Verify card ── */}
+          <View className="px-6 mt-6">
+            <View className="bg-white border border-border rounded-3xl p-6">
+              <Text className="text-lg font-bold text-navy mb-1">
+                Verify Access Code
+              </Text>
+              <Text className="text-sm text-muted mb-6">
+                Enter a visitor code or scan QR to verify access.
+              </Text>
+
+              {/* 5 underline cells (tapping focuses the hidden input) */}
+              <Pressable
+                onPress={() => inputRef.current?.focus()}
+                className="mb-6"
+              >
+                <View className="flex-row justify-between">
+                  {cells.map((_, i) => (
+                    <View
+                      key={i}
+                      className="items-center"
+                      style={{ width: 48 }}
+                    >
+                      <Text className="text-2xl font-bold text-navy h-9">
+                        {code[i] ?? ""}
+                      </Text>
+                      <View
+                        className="h-[2px] w-full"
+                        style={{
+                          backgroundColor:
+                            i < code.length ? "#1B4FD8" : "#E5E7EB",
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
+                {/* hidden input that actually captures digits */}
+                <TextInput
+                  ref={inputRef}
+                  value={code}
+                  maxLength={CODE_LENGTH}
+                  onChangeText={(t) =>
+                    setCode(t.replace(/\D/g, "").slice(0, CODE_LENGTH))
+                  }
+                  keyboardType="number-pad"
+                  style={{
+                    position: "absolute",
+                    opacity: 0,
+                    height: 1,
+                    width: 1,
+                  }}
+                />
+              </Pressable>
+
+              {error ? (
+                <Text className="text-danger text-sm mb-3 text-center">
+                  {error}
+                </Text>
+              ) : null}
+
+              <Pressable
+                onPress={handleVerify}
+                disabled={code.length < 4 || verify.isPending}
+                className={`h-14 rounded-2xl items-center justify-center mb-3 ${
+                  code.length < 4 || verify.isPending
+                    ? "bg-primary-200"
+                    : "bg-[#084BA3]"
+                }`}
+              >
+                {verify.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white text-base font-semibold">
+                    Verify Code
+                  </Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push("/(app)/verify/scan")}
+                className="h-14 rounded-2xl items-center justify-center border border-border flex-row gap-2"
+              >
+                <QrCode size={18} color="#1B2A4A" />
+                <Text className="text-navy text-base font-semibold">
+                  Scan QR Code
+                </Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }

@@ -123,7 +123,10 @@ export default function EstatePinScreen() {
   // ── Step 1: Enter estate PIN ──────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <BackHeader title="Estate PIN" onBack={() => router.back()} />
+      <BackHeader
+        title="Estate PIN"
+        onBack={() => router.push("/(auth)/welcome")}
+      />
 
       <View className="flex-1 px-6 pt-8">
         <Text className="text-2xl font-bold text-navy mb-1">

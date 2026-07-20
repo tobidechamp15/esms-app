@@ -55,7 +55,15 @@ export async function getPastVisits(
       params: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
-        status: ['scheduled', 'checked_in', 'checked_out', 'cancelled', 'expired', 'revoked'],
+        // Backend expects a comma-separated string, which the schema splits into an array
+        status: [
+          "scheduled",
+          "checked_in",
+          "checked_out",
+          "cancelled",
+          "expired",
+          "revoked",
+        ].join(","),
         ...(params.search ? { search: params.search } : {}),
       },
     },
@@ -63,10 +71,41 @@ export async function getPastVisits(
   return data;
 }
 
-export async function getUpcomingVisits(): Promise<Visit[]> {
-  const result = await getMyVisits({ status: "scheduled", limit: 50 });
-  const today = new Date().toISOString().slice(0, 10);
-  return result.data.filter((v) => v.visitDate >= today);
+export async function getUpcomingVisits(
+  params: GetVisitsParams = {},
+): Promise<PaginatedResponse<Visit>> {
+  const { data } = await apiClient.get<PaginatedResponse<Visit>>(
+    VISIT_ENDPOINTS.MY_VISITS,
+    {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        status: "scheduled",
+        ...(params.search ? { search: params.search } : {}),
+      },
+    },
+  );
+  return data;
+}
+
+/**
+ * Get ALL visits (security/admin) — calls GET /api/v1/visits.
+ */
+export async function getAllVisits(
+  params: GetVisitsParams = {},
+): Promise<PaginatedResponse<Visit>> {
+  const { data } = await apiClient.get<PaginatedResponse<Visit>>(
+    VISIT_ENDPOINTS.BASE,
+    {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 20,
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.search ? { search: params.search } : {}),
+      },
+    },
+  );
+  return data;
 }
 
 export async function getVisitById(id: string): Promise<Visit> {

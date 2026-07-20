@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, View } from "react-native";
 
 import { NumPad, PinDots } from "@/components/ui";
@@ -30,6 +30,13 @@ export function PinConfirmModal({
 }: PinConfirmModalProps) {
   const [pin, setPin] = useState("");
 
+  // Reset pin state whenever the modal becomes visible (fixes stale pin on reactivation)
+  useEffect(() => {
+    if (visible) {
+      setPin("");
+    }
+  }, [visible]);
+
   function handleDigit(d: string) {
     if (pin.length >= PIN_LENGTH || loading) return;
     const next = pin + d;
@@ -45,10 +52,17 @@ export function PinConfirmModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={handleClose}
+    >
       <View className="flex-1 bg-black/60 justify-end">
         <View className="bg-white rounded-t-3xl px-6 pt-6 pb-8">
-          <Text className={`text-lg font-bold mb-1 ${danger ? "text-danger" : "text-navy"}`}>
+          <Text
+            className={`text-lg font-bold mb-1 ${danger ? "text-danger" : "text-navy"}`}
+          >
             {title}
           </Text>
           <Text className="text-sm text-muted mb-6">{message}</Text>
@@ -56,9 +70,15 @@ export function PinConfirmModal({
           <Text className="text-sm font-medium text-navy mb-3 text-center">
             Enter your PIN to confirm
           </Text>
-          <PinDots length={PIN_LENGTH} filled={pin.length} error={Boolean(error)} />
+          <PinDots
+            length={PIN_LENGTH}
+            filled={pin.length}
+            error={Boolean(error)}
+          />
           {error ? (
-            <Text className="text-danger text-sm mt-3 text-center">{error}</Text>
+            <Text className="text-danger text-sm mt-3 text-center">
+              {error}
+            </Text>
           ) : null}
 
           {loading ? (
@@ -68,11 +88,17 @@ export function PinConfirmModal({
             </View>
           ) : (
             <View className="mt-5">
-              <NumPad onPress={handleDigit} onDelete={() => setPin((p) => p.slice(0, -1))} />
+              <NumPad
+                onPress={handleDigit}
+                onDelete={() => setPin((p) => p.slice(0, -1))}
+              />
             </View>
           )}
 
-          <Pressable onPress={handleClose} className="h-12 items-center justify-center mt-2">
+          <Pressable
+            onPress={handleClose}
+            className="h-12 items-center justify-center mt-2"
+          >
             <Text className="text-muted font-medium">Cancel</Text>
           </Pressable>
         </View>

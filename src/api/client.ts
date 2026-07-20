@@ -24,7 +24,16 @@ export async function getStoredTokens(): Promise<AuthTokens | null> {
       SecureStore.getItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
     ]);
     if (!accessToken || !refreshToken || !expiresAtStr) return null;
-    return { accessToken, refreshToken, expiresAt: Number(expiresAtStr) };
+
+    const expiresAt = Number(expiresAtStr);
+
+    // Staleness check: reject tokens that are already expired at the storage level
+    if (Date.now() > expiresAt) {
+      await clearTokens();
+      return null;
+    }
+
+    return { accessToken, refreshToken, expiresAt };
   } catch {
     return null;
   }
@@ -48,7 +57,7 @@ export async function clearTokens(): Promise<void> {
     SecureStore.deleteItemAsync(STORAGE_KEYS.TOKEN_EXPIRY),
     SecureStore.deleteItemAsync(STORAGE_KEYS.USER),
     SecureStore.deleteItemAsync(STORAGE_KEYS.OTP_TOKEN),
-    SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH), // ← add this
+    SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH),
   ]);
 }
 
@@ -95,6 +104,14 @@ let refreshQueue: Array<{
   resolve: (token: string) => void;
   reject: (err: unknown) => void;
 }> = [];
+
+// Optional callback invoked when token refresh fails (e.g. both tokens expired).
+// Register via setOnAuthFailure() to reset the auth store so the app redirects
+// to the login flow instead of continuing to make unauthorized requests.
+let _onAuthFailure: (() => void) | null = null;
+export function setOnAuthFailure(cb: () => void) {
+  _onAuthFailure = cb;
+}
 
 function flushQueue(error: unknown, token: string | null): void {
   refreshQueue.forEach(({ resolve, reject }) => {
@@ -145,7 +162,7 @@ apiClient.interceptors.response.use(
           { refreshToken: tokens.refreshToken },
         );
 
-        const newTokens = data.data.tokens; // ← unwrap the nested .tokens
+        const newTokens = data.data.tokens;
         await saveTokens(newTokens);
         flushQueue(null, newTokens.accessToken);
         originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
@@ -153,6 +170,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         flushQueue(refreshError, null);
         await clearTokens();
+        _onAuthFailure?.();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

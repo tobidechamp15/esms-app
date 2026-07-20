@@ -127,7 +127,7 @@ export default function GenerateActivationScreen() {
         expiresAt={codeModal?.expiresAt}
         onClose={() => {
           setCodeModal(null);
-          router.back();
+          router.push("/(app)/support");
         }}
       />
     </SafeAreaView>

@@ -1,6 +1,6 @@
-import { apiClient } from './client';
-import { NOTIFICATION_ENDPOINTS } from '@/constants/api';
-import type { ApiResponse, AppNotification, PaginatedResponse } from '@/types';
+import { apiClient } from "./client";
+import { NOTIFICATION_ENDPOINTS } from "@/constants/api";
+import type { ApiResponse, AppNotification, PaginatedResponse } from "@/types";
 
 export async function getNotifications(
   page = 1,

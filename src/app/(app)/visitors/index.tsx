@@ -1,24 +1,30 @@
 import * as Clipboard from "expo-clipboard";
-import * as Sharing from "expo-sharing";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Modal,
   Pressable,
-  ScrollView,
-  Share,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 
 import { Copy, Search, ShareIcon, X } from "@/components/ui/Icons";
+import VisitShareCard, {
+  type VisitShareCardRef,
+} from "@/components/visits/VisitShareCard";
 import {
-  usePastVisits,
+  usePaginatedPastVisits,
+  usePaginatedUpcomingVisits,
+  usePaginatedAllPastVisits,
+  usePaginatedAllUpcomingVisits,
   useRevokeVisit,
-  useUpcomingVisits,
 } from "@/hooks/useQueries";
+import { ESTATE_NAME } from "@/constants/api";
+import { useAuthStore, selectIsSecurity } from "@/store/authStore";
 import type { Visit, VisitStatus } from "@/types";
 
 type Tab = "past" | "upcoming";
@@ -39,10 +45,62 @@ function statusLabel(status: VisitStatus): string {
     checked_in: "Visitor Arrived",
     checked_out: "Visitor Left",
     cancelled: "Cancelled",
-    expired: "Code has expired",
+    expired: "Code Expired",
     revoked: "Access Removed",
   };
   return map[status];
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function SkeletonRow() {
+  return (
+    <View className="border-b border-border py-4 px-1">
+      <View className="h-5 w-40 rounded-md bg-gray-200 mb-2" />
+      <View className="h-3 w-56 rounded-md bg-gray-100 mb-1.5" />
+      <View className="h-3 w-48 rounded-md bg-gray-100 mb-1.5" />
+      <View className="h-3 w-36 rounded-md bg-gray-100" />
+    </View>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <View className="px-6 pt-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <SkeletonRow key={i} />
+      ))}
+    </View>
+  );
+}
+
+// ─── List Footer ──────────────────────────────────────────────────────────────
+
+function ListFooter({
+  isFetching,
+  hasMore,
+}: {
+  isFetching: boolean;
+  hasMore: boolean;
+}) {
+  if (isFetching) {
+    return (
+      <View className="py-6 items-center">
+        <View className="flex-row items-center gap-3">
+          <ActivityIndicator size="small" color="#084BA3" />
+          <Text className="text-sm text-muted">Loading more...</Text>
+        </View>
+      </View>
+    );
+  }
+  if (!hasMore) {
+    return (
+      <View className="py-8 items-center">
+        <Text className="text-xs text-muted">— All loaded —</Text>
+      </View>
+    );
+  }
+  return <View className="h-4" />;
 }
 
 // ─── Past Card ────────────────────────────────────────────────────────────────
@@ -218,30 +276,26 @@ function RemoveModal({
 // ─── Visitors Screen ──────────────────────────────────────────────────────────
 
 export default function VisitorsScreen() {
-  const [tab, setTab] = useState<Tab>("past");
+  const isSecurity = useAuthStore(selectIsSecurity);
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(
+    initialTab === "upcoming" ? "upcoming" : "past",
+  );
   const [search, setSearch] = useState("");
   const [removeTarget, setRemoveTarget] = useState<Visit | null>(null);
   const [didRemove, setDidRemove] = useState(false);
+  const [sharingVisit, setSharingVisit] = useState<Visit | null>(null);
+  const shareCardRef = useRef<VisitShareCardRef>(null);
 
-  const {
-    data: pastData,
-    isLoading: pastLoading,
-    isError: pastErr,
-    refetch: refetchPast,
-  } = usePastVisits(search);
-  const {
-    data: upcoming = [],
-    isLoading: upcomingLoading,
-    isError: upErr,
-    refetch: refetchUp,
-  } = useUpcomingVisits();
+  // Security sees ALL estate visits; residents see only their own
+  const past = isSecurity
+    ? usePaginatedAllPastVisits(search)
+    : usePaginatedPastVisits(search);
+  const upcoming = isSecurity
+    ? usePaginatedAllUpcomingVisits()
+    : usePaginatedUpcomingVisits();
 
   const revokeVisit = useRevokeVisit();
-
-  const pastVisits = pastData?.data ?? [];
-  const isLoading = tab === "past" ? pastLoading : upcomingLoading;
-  const isError = tab === "past" ? pastErr : upErr;
-  const refetch = tab === "past" ? refetchPast : refetchUp;
 
   function openRemove(v: Visit) {
     setRemoveTarget(v);
@@ -254,12 +308,45 @@ export default function VisitorsScreen() {
     setDidRemove(true);
   }
 
+  const handleEndReached = useCallback(() => {
+    if (tab === "past") {
+      if (past.hasNextPage && !past.isFetchingNextPage) past.fetchNextPage();
+    } else {
+      if (upcoming.hasNextPage && !upcoming.isFetchingNextPage)
+        upcoming.fetchNextPage();
+    }
+  }, [tab, past, upcoming]);
+
+  const active = tab === "past" ? past : upcoming;
+
+  const renderItem = useCallback(
+    ({ item }: { item: Visit }) => {
+      if (tab === "past") return <PastCard visit={item} />;
+      return (
+        <UpcomingCard
+          visit={item}
+          onRemove={() => openRemove(item)}
+          onShare={() => setSharingVisit(item)}
+        />
+      );
+    },
+    [tab],
+  );
+
+  const keyExtractor = useCallback((item: Visit) => item.id, []);
+
   return (
     <SafeAreaView className="flex-1 bg-surface">
       {/* Header */}
       <View className="px-6 pt-6 pb-3">
         <Text className="text-2xl font-bold text-navy">
-          {tab === "past" ? "Past Visitors" : "All Upcoming Visits"}
+          {isSecurity
+            ? tab === "past"
+              ? "Estate Past Visits"
+              : "Estate Upcoming Visits"
+            : tab === "past"
+              ? "Past Visitors"
+              : "All Upcoming Visits"}
         </Text>
       </View>
 
@@ -268,7 +355,10 @@ export default function VisitorsScreen() {
         {(["past", "upcoming"] as Tab[]).map((t) => (
           <Pressable
             key={t}
-            onPress={() => setTab(t)}
+            onPress={() => {
+              setTab(t);
+              setSearch("");
+            }}
             className={`flex-1 h-9 rounded-2xl items-center justify-center ${
               tab === t ? "bg-[#084BA3]" : "bg-white border border-border"
             }`}
@@ -300,59 +390,61 @@ export default function VisitorsScreen() {
       )}
 
       {/* Content */}
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#1B4FD8" />
-        </View>
-      ) : isError ? (
+      {active.isLoading ? (
+        <ListSkeleton />
+      ) : active.isError ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-danger text-sm font-medium mb-2">
             Couldn't load visits
           </Text>
           <Pressable
-            onPress={() => refetch()}
+            onPress={() => active.refresh()}
             className="h-9 px-4 rounded-xl bg-[#084BA3] items-center justify-center"
           >
             <Text className="text-white text-sm font-medium">Retry</Text>
           </Pressable>
         </View>
+      ) : active.items.length === 0 ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-muted text-sm">
+            {tab === "past"
+              ? search
+                ? `No results for "${search}"`
+                : "No past visitors yet."
+              : "No upcoming visits."}
+          </Text>
+        </View>
       ) : (
-        <ScrollView
-          className="flex-1 px-6"
+        <FlatList
+          data={active.items}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
-          contentContainerClassName="pb-8"
-        >
-          {tab === "past" ? (
-            pastVisits.length > 0 ? (
-              pastVisits.map((v) => <PastCard key={v.id} visit={v} />)
-            ) : (
-              <View className="py-12 items-center">
-                <Text className="text-muted text-sm">
-                  {search
-                    ? `No results for "${search}"`
-                    : "No past visitors yet."}
-                </Text>
-              </View>
-            )
-          ) : upcoming.length > 0 ? (
-            upcoming.map((v) => (
-              <UpcomingCard
-                key={v.id}
-                visit={v}
-                onRemove={() => openRemove(v)}
-                onShare={() =>
-                  Share.share({
-                    message: `Ventry access code for ${v.visitorName}: ${v.accessCode}`,
-                  })
-                }
-              />
-            ))
-          ) : (
-            <View className="py-12 items-center">
-              <Text className="text-muted text-sm">No upcoming visits.</Text>
-            </View>
-          )}
-        </ScrollView>
+          contentContainerClassName="px-6 pb-8"
+          ListFooterComponent={
+            <ListFooter
+              isFetching={active.isFetchingNextPage}
+              hasMore={active.hasNextPage}
+            />
+          }
+        />
+      )}
+
+      {/* Hidden share card */}
+      {sharingVisit && (
+        <VisitShareCard
+          ref={shareCardRef}
+          accessCode={sharingVisit.accessCode}
+          qrCodeData={sharingVisit.qrCodeData}
+          visitorName={sharingVisit.visitorName}
+          visitDate={sharingVisit.visitDate}
+          arrivalTime={sharingVisit.expectedArrivalTime}
+          estateName={ESTATE_NAME}
+          autoShare
+          onShareComplete={() => setSharingVisit(null)}
+        />
       )}
 
       <RemoveModal
