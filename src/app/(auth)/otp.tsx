@@ -1,30 +1,49 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { sendOtp, verifyOtp } from '@/api/auth';
-import { BackHeader, Button, NumPad, PinDots } from '@/components/ui';
+import { sendOtp, verifyOtp } from "@/api/auth";
+import { BackHeader, Button, NumPad, PinDots } from "@/components/ui";
 
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
   const router = useRouter();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
-  const [otp, setOtp] = useState('');
+  const { phone, code: preFilledCode } = useLocalSearchParams<{
+    phone: string;
+    code?: string;
+  }>();
+  const [otp, setOtp] = useState(preFilledCode ?? "");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const hasAutoVerified = useRef(false);
+
+  // Auto-verify when a code is pre-filled (OTP_BYPASS on server)
+  useEffect(() => {
+    if (
+      preFilledCode &&
+      preFilledCode.length === OTP_LENGTH &&
+      !hasAutoVerified.current
+    ) {
+      hasAutoVerified.current = true;
+      setLoading(true); // Show spinner while the brief delay runs
+      // Small delay so the UI renders the filled dots before verifying
+      const timer = setTimeout(() => handleVerify(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [preFilledCode]);
 
   function handleDigit(d: string) {
     if (otp.length >= OTP_LENGTH) return;
     setOtp((p) => p + d);
-    setError('');
+    setError("");
   }
 
   function handleDelete() {
     setOtp((p) => p.slice(0, -1));
-    setError('');
+    setError("");
   }
 
   async function handleVerify() {
@@ -34,14 +53,17 @@ export default function OtpScreen() {
       const result = await verifyOtp(phone, otp);
       if (result.isExistingUser) {
         // Existing user — go to login flow with OTP token already saved
-        router.replace('/(app)/home');
+        router.replace("/(app)/home");
       } else {
         // New user — complete profile
-        router.push({ pathname: '/(auth)/complete-profile', params: { phone } });
+        router.push({
+          pathname: "/(auth)/complete-profile",
+          params: { phone },
+        });
       }
     } catch {
-      setError('Invalid or expired OTP code.');
-      setOtp('');
+      setError("Invalid or expired OTP code.");
+      setOtp("");
     } finally {
       setLoading(false);
     }
@@ -50,11 +72,11 @@ export default function OtpScreen() {
   async function handleResend() {
     setResending(true);
     try {
-      await sendOtp(phone);
-      setError('');
-      setOtp('');
+      const code = await sendOtp(phone);
+      setError("");
+      setOtp(code ?? "");
     } catch {
-      setError('Could not resend OTP. Try again.');
+      setError("Could not resend OTP. Try again.");
     } finally {
       setResending(false);
     }
@@ -69,11 +91,15 @@ export default function OtpScreen() {
           Verify Your Number
         </Text>
         <Text className="text-sm text-muted mb-10">
-          Enter the 6-digit code sent to{' '}
+          Enter the 6-digit code sent to{" "}
           <Text className="text-primary-500 font-medium">{phone}</Text>
         </Text>
 
-        <PinDots length={OTP_LENGTH} filled={otp.length} error={Boolean(error)} />
+        <PinDots
+          length={OTP_LENGTH}
+          filled={otp.length}
+          error={Boolean(error)}
+        />
         {error ? (
           <Text className="text-danger text-sm mt-4">{error}</Text>
         ) : null}
@@ -90,9 +116,9 @@ export default function OtpScreen() {
           <Text className="text-sm text-muted">Didn't receive a code? </Text>
           <Text
             onPress={!resending ? handleResend : undefined}
-            className={`text-sm font-semibold ${resending ? 'text-muted' : 'text-primary-500'}`}
+            className={`text-sm font-semibold ${resending ? "text-muted" : "text-primary-500"}`}
           >
-            {resending ? 'Sending...' : 'Resend'}
+            {resending ? "Sending..." : "Resend"}
           </Text>
         </View>
         <NumPad onPress={handleDigit} onDelete={handleDelete} />

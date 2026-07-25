@@ -48,6 +48,7 @@ export default function RootLayout() {
 
   const [panicVisible, setPanicVisible] = useState(false);
   const [showSplash, setShowSplash] = useState(!hasPlayedSplash);
+  const [hydrated, setHydrated] = useState(false);
 
   // Initialize app security on startup
   useEffect(() => {
@@ -100,7 +101,10 @@ export default function RootLayout() {
       .then(() => {
         if (useAuthStore.getState().tokens) registerPushToken();
       })
-      .finally(() => SplashScreen.hideAsync());
+      .finally(() => {
+        setHydrated(true);
+        SplashScreen.hideAsync();
+      });
   }, []);
 
   // Raise the full-screen alarm when a panic push arrives or is tapped.
@@ -124,7 +128,10 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (isLoading) return null;
+  // Only block render during initial hydration, not during async actions
+  // like registration or login (which also set isLoading on the auth store).
+  // Returning null during those would unmount the entire navigation tree.
+  if (!hydrated && isLoading) return null;
 
   return (
     <QueryClientProvider client={queryClient}>

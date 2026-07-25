@@ -62,10 +62,7 @@ export default function VerifyResultScreen() {
       </View>
 
       <View className="px-6 pb-6 gap-3">
-        <Button
-          label="Verify Another"
-          onPress={() => router.replace("/(app)/verify")}
-        />
+        <Button label="Verify Another" onPress={() => router.back()} />
       </View>
     </SafeAreaView>
   );

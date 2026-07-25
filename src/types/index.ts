@@ -82,6 +82,7 @@ export interface AuthState {
   tokens: AuthTokens | null;
   isPinSet: boolean;
   isPinVerified: boolean;
+  isBiometricsEnabled: boolean;
   isLoading: boolean;
   error: string | null;
 }

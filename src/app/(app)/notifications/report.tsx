@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,13 +26,18 @@ export default function ReportDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: report, isLoading, isError, refetch } = useConcern(id!);
   const updateStatus = useUpdateConcernStatus();
+  const [error, setError] = useState("");
 
   async function setStatus(status: "submitted" | "under_review" | "resolved") {
+    setError("");
     try {
       await updateStatus.mutateAsync({ id: id!, status });
       refetch();
-    } catch {
-      /* surfaced via toast */
+    } catch (err) {
+      setError(
+        (err as { message?: string })?.message ??
+          "Could not update status. Check your connection and try again.",
+      );
     }
   }
 
@@ -89,8 +95,16 @@ export default function ReportDetailScreen() {
           <Text className="text-sm font-semibold text-navy mt-6 mb-3">
             Update Status
           </Text>
+
+          {error ? (
+            <Text className="text-danger text-sm mb-3 text-center">
+              {error}
+            </Text>
+          ) : null}
+
           {STATUSES.map((s) => {
             const active = report.status === s.key;
+            const loading = updateStatus.isPending && s.key === report.status;
             return (
               <Pressable
                 key={s.key}
@@ -100,13 +114,17 @@ export default function ReportDetailScreen() {
                   active
                     ? "bg-[#084BA3] border-[#084BA3]"
                     : "bg-white border-border"
-                }`}
+                } ${updateStatus.isPending ? "opacity-60" : ""}`}
               >
-                <Text
-                  className={`text-sm font-medium ${active ? "text-white" : "text-navy"}`}
-                >
-                  {s.label}
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text
+                    className={`text-sm font-medium ${active ? "text-white" : "text-navy"}`}
+                  >
+                    {s.label}
+                  </Text>
+                )}
               </Pressable>
             );
           })}

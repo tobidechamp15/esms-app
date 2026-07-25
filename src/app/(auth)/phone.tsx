@@ -1,30 +1,44 @@
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { sendOtp } from '@/api/auth';
-import { BackHeader, Button } from '@/components/ui';
+import { sendOtp } from "@/api/auth";
+import { BackHeader, Button } from "@/components/ui";
 
 export default function PhoneScreen() {
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const isValid = phone.replace(/\s/g, '').length >= 10;
+  const isValid = phone.replace(/\s/g, "").length >= 10;
 
   async function handleSendOtp() {
     if (!isValid) return;
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const formatted = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-      await sendOtp(formatted);
-      router.push({ pathname: '/(auth)/otp', params: { phone: formatted } });
+      const formatted = phone.startsWith("+")
+        ? phone
+        : `+234${phone.replace(/^0/, "")}`;
+      const code = await sendOtp(formatted);
+      router.push({
+        pathname: "/(auth)/otp",
+        params: { phone: formatted, code: code ?? "" },
+      });
     } catch (err) {
-      setError((err as { message?: string }).message ?? 'Failed to send OTP. Try again.');
+      setError(
+        (err as { message?: string }).message ??
+          "Failed to send OTP. Try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -34,7 +48,7 @@ export default function PhoneScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <BackHeader title="Create Account" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
         <View className="flex-1 px-6 pt-8">
@@ -45,11 +59,16 @@ export default function PhoneScreen() {
             Enter your phone number to receive a verification code.
           </Text>
 
-          <Text className="text-sm font-medium text-navy mb-2">Phone Number</Text>
+          <Text className="text-sm font-medium text-navy mb-2">
+            Phone Number
+          </Text>
           <TextInput
             ref={inputRef}
             value={phone}
-            onChangeText={(t) => { setPhone(t); setError(''); }}
+            onChangeText={(t) => {
+              setPhone(t);
+              setError("");
+            }}
             placeholder="Enter your phone number"
             placeholderTextColor="#9CA3AF"
             keyboardType="phone-pad"

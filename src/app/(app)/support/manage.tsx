@@ -144,9 +144,8 @@ export default function ManageAccountScreen() {
           ? "text-amber-600"
           : "text-muted";
 
-  // Navigate to visitors page (upcoming) instead of back to support
   function handleBack() {
-    router.push("/(app)/visitors?tab=upcoming");
+    router.back();
   }
 
   return (

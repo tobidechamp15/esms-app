@@ -73,6 +73,11 @@ export default function SettingsScreen() {
             onPress={() => router.push("/(app)/settings/security")}
           />
           <SettingRow
+            icon={<Lock size={22} color="#0A1628" />}
+            label="Biometrics"
+            onPress={() => router.push("/(app)/settings/biometric")}
+          />
+          <SettingRow
             icon={<Bell size={22} color="#0A1628" />}
             label="Notifications Settings"
             onPress={() => router.push("/(app)/settings/notification-settings")}
@@ -86,9 +91,7 @@ export default function SettingsScreen() {
             <SettingRow
               icon={<AlertTriangle size={22} color="#0A1628" />}
               label="Create An Announcement"
-              onPress={() =>
-                router.push("/(app)/settings/announce" as any)
-              }
+              onPress={() => router.push("/(app)/settings/announce" as any)}
             />
           ) : (
             <SettingRow

@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -31,6 +31,17 @@ export default function LoginScreen() {
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasAutoVerified = useRef(false);
+
+  // Auto-verify when OTP code is pre-filled (OTP_BYPASS on server)
+  useEffect(() => {
+    if (otp.length === 6 && step === "otp" && !hasAutoVerified.current) {
+      hasAutoVerified.current = true;
+      setLoading(true); // Show spinner while the brief delay runs
+      const timer = setTimeout(() => handleVerifyOtp(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [otp, step]);
 
   // Step 1 — send OTP
   async function handleSendOtp() {
@@ -40,8 +51,9 @@ export default function LoginScreen() {
       const formatted = phone.startsWith("+")
         ? phone
         : `+234${phone.replace(/^0/, "")}`;
-      await sendOtp(formatted);
+      const code = await sendOtp(formatted);
       setPhone(formatted);
+      setOtp(code ?? "");
       setStep("otp");
     } catch (err) {
       setError((err as { message?: string }).message ?? "Failed to send OTP.");

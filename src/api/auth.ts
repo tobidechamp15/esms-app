@@ -42,8 +42,14 @@ export async function getEstateStreets(): Promise<string[]> {
 
 // ─── OTP ──────────────────────────────────────────────────────────────────────
 
-export async function sendOtp(phone: string): Promise<void> {
-  await apiClient.post(AUTH_ENDPOINTS.OTP_SEND, { phone });
+export async function sendOtp(phone: string): Promise<string | undefined> {
+  const { data } = await apiClient.post<ApiResponse<{ code?: string }>>(
+    AUTH_ENDPOINTS.OTP_SEND,
+    { phone },
+  );
+  // When OTP_BYPASS is enabled server-side, the API returns the code
+  // so the frontend can auto-fill it for the tester.
+  return data.data?.code;
 }
 
 export async function verifyOtp(

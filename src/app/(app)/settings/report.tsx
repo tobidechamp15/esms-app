@@ -90,6 +90,7 @@ export default function ReportDetailScreen() {
           </Text>
           {STATUSES.map((s) => {
             const active = report.status === s.key;
+            const loading = updateStatus.isPending && s.key === report.status;
             return (
               <Pressable
                 key={s.key}
@@ -99,13 +100,17 @@ export default function ReportDetailScreen() {
                   active
                     ? "bg-[#084BA3] border-[#084BA3]"
                     : "bg-white border-border"
-                }`}
+                } ${updateStatus.isPending ? "opacity-60" : ""}`}
               >
-                <Text
-                  className={`text-sm font-medium ${active ? "text-white" : "text-navy"}`}
-                >
-                  {s.label}
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text
+                    className={`text-sm font-medium ${active ? "text-white" : "text-navy"}`}
+                  >
+                    {s.label}
+                  </Text>
+                )}
               </Pressable>
             );
           })}

@@ -7,6 +7,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="account" />
       <Stack.Screen name="security" />
       <Stack.Screen name="notification-settings" />
+      <Stack.Screen name="biometric" />
       <Stack.Screen name="legal" />
       <Stack.Screen name="report" />
       <Stack.Screen name="announce" />
