@@ -38,6 +38,9 @@ interface AuthActions {
   refreshProfile: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User) => void;
+  resetEstatePin: () => Promise<void>;
+  enableBiometrics: () => Promise<void>;
+  disableBiometrics: () => Promise<void>;
 }
 
 const initialState: AuthState = {
@@ -45,6 +48,7 @@ const initialState: AuthState = {
   tokens: null,
   isPinSet: false,
   isPinVerified: false,
+  isBiometricsEnabled: false,
   isLoading: false,
   error: null,
 };
@@ -55,16 +59,18 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   hydrate: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [user, tokens, pinHash] = await Promise.all([
+      const [user, tokens, pinHash, biometricPref] = await Promise.all([
         getStoredUser(),
         getStoredTokens(),
         SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH),
+        SecureStore.getItemAsync(STORAGE_KEYS.BIOMETRIC_ENABLED),
       ]);
       set({
         user,
         tokens,
         isPinSet: Boolean(pinHash),
         isPinVerified: false,
+        isBiometricsEnabled: biometricPref === "true",
         isLoading: false,
       });
       if (user && tokens) {
@@ -96,7 +102,16 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const { user, tokens } = await loginWithPhone(otpToken);
       const pinHash = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
-      set({ user, tokens, isPinSet: Boolean(pinHash), isLoading: false });
+      const biometricPref = await SecureStore.getItemAsync(
+        STORAGE_KEYS.BIOMETRIC_ENABLED,
+      );
+      set({
+        user,
+        tokens,
+        isPinSet: Boolean(pinHash),
+        isBiometricsEnabled: biometricPref === "true",
+        isLoading: false,
+      });
       registerPushToken(); // fire-and-forget device token registration
     } catch (err) {
       const message = (err as { message?: string }).message ?? "Login failed.";
@@ -170,6 +185,16 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   },
   clearError: () => set({ error: null }),
   setUser: (user) => set({ user }),
+
+  enableBiometrics: async () => {
+    await SecureStore.setItemAsync(STORAGE_KEYS.BIOMETRIC_ENABLED, "true");
+    set({ isBiometricsEnabled: true });
+  },
+
+  disableBiometrics: async () => {
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.BIOMETRIC_ENABLED);
+    set({ isBiometricsEnabled: false });
+  },
 }));
 
 export const selectUser = (s: AuthState & AuthActions) => s.user;
@@ -179,3 +204,5 @@ export const selectIsSecurity = (s: AuthState & AuthActions) =>
   s.user?.role === "security" || s.user?.role === "admin";
 export const selectIsAdmin = (s: AuthState & AuthActions) =>
   s.user?.role === "admin" || Boolean(s.user?.isAdmin);
+export const selectIsBiometricsEnabled = (s: AuthState & AuthActions) =>
+  s.isBiometricsEnabled;

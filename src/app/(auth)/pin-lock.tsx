@@ -4,7 +4,7 @@ import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { NumPad, PinDots } from "@/components/ui";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, selectIsBiometricsEnabled } from "@/store/authStore";
 import {
   authenticateWithBiometrics,
   hasBiometricsEnrolled,
@@ -16,6 +16,7 @@ export default function PinLockScreen() {
   const router = useRouter();
   const verifyPin = useAuthStore((s) => s.verifyPin);
   const logoutUser = useAuthStore((s) => s.logoutUser);
+  const isBiometricsEnabled = useAuthStore(selectIsBiometricsEnabled);
 
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -26,12 +27,12 @@ export default function PinLockScreen() {
     hasBiometricsEnrolled().then(setBiometricsAvailable);
   }, []);
 
-  // Attempt biometric authentication on mount if available
+  // Attempt biometric authentication on mount ONLY if user has opted in
   useEffect(() => {
-    if (biometricsAvailable) {
+    if (biometricsAvailable && isBiometricsEnabled) {
       handleBiometricAuth();
     }
-  }, [biometricsAvailable]);
+  }, [biometricsAvailable, isBiometricsEnabled]);
 
   async function handleBiometricAuth() {
     const result = await authenticateWithBiometrics();
@@ -77,7 +78,7 @@ export default function PinLockScreen() {
       </View>
 
       <View className="px-6 pb-8 gap-4">
-        {biometricsAvailable && (
+        {biometricsAvailable && isBiometricsEnabled && (
           <Text
             onPress={handleBiometricAuth}
             className="text-center text-sm text-primary-500 font-medium py-2"

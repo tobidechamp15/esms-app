@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,6 +17,15 @@ export default function ScanScreen() {
   const verify = useVerifyCode();
   const [scanned, setScanned] = useState(false);
   const lock = useRef(false);
+
+  // Reset scan state every time the screen gains focus
+  // This ensures the loader dismisses when navigating back to this screen
+  useFocusEffect(
+    useCallback(() => {
+      setScanned(false);
+      lock.current = false;
+    }, []),
+  );
 
   async function onScan({ data }: { data: string }) {
     // Prevent concurrent scans
@@ -121,7 +130,7 @@ export default function ScanScreen() {
       </View>
       <View className="px-6 pb-6">
         <Pressable
-          onPress={() => router.replace("/(app)/verify")}
+          onPress={() => router.back()}
           className="h-12 items-center justify-center"
         >
           <Text className="text-white font-medium">

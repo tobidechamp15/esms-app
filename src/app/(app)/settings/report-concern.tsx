@@ -1,5 +1,5 @@
-import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -10,19 +10,19 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { BackHeader, Button } from '@/components/ui';
-import { Upload, X } from '@/components/ui/Icons';
-import { useSubmitConcern } from '@/hooks/useQueries';
-import { useAuthStore } from '@/store/authStore';
+import { BackHeader, Button } from "@/components/ui";
+import { Upload, X } from "@/components/ui/Icons";
+import { useSubmitConcern } from "@/hooks/useQueries";
+import { useAuthStore } from "@/store/authStore";
 
 export default function ReportConcernScreen() {
   const user = useAuthStore((s) => s.user);
   const submit = useSubmitConcern();
 
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState("");
   const [attachment, setAttachment] = useState<{
     uri: string;
     name: string;
@@ -32,6 +32,21 @@ export default function ReportConcernScreen() {
 
   const address = `No. ${user?.houseNumber}, ${user?.streetName}`;
 
+  /** Map common file extensions to proper MIME types the backend accepts. */
+  function mimeTypeFromExtension(filename: string, fallback: string): string {
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    const MAP: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      heic: "image/jpeg",
+      heif: "image/jpeg",
+    };
+    return MAP[ext] ?? fallback;
+  }
+
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -40,12 +55,15 @@ export default function ReportConcernScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      const filename = asset.uri.split('/').pop() ?? 'attachment.jpg';
-      const ext = filename.split('.').pop() ?? 'jpg';
+      const filename = asset.uri.split("/").pop() ?? "attachment.jpg";
+      // Prefer the MIME type from the picker (available on modern Expo SDK);
+      // fall back to extension-based mapping for safety.
+      const type =
+        asset.mimeType ?? mimeTypeFromExtension(filename, "image/jpeg");
       setAttachment({
         uri: asset.uri,
         name: filename,
-        type: `image/${ext}`,
+        type,
       });
     }
   }
@@ -57,7 +75,7 @@ export default function ReportConcernScreen() {
       address,
       attachment: attachment ?? undefined,
     });
-    setSubject('');
+    setSubject("");
     setAttachment(null);
     setShowSuccess(true);
   }
@@ -66,7 +84,7 @@ export default function ReportConcernScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <BackHeader title="Report a Concern" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
         <ScrollView
@@ -107,7 +125,10 @@ export default function ReportConcernScreen() {
                 resizeMode="cover"
               />
               <View className="flex-1">
-                <Text className="text-sm font-medium text-navy" numberOfLines={1}>
+                <Text
+                  className="text-sm font-medium text-navy"
+                  numberOfLines={1}
+                >
                   {attachment.name}
                 </Text>
                 <Text className="text-xs text-muted mt-0.5">Tap to change</Text>
@@ -161,7 +182,9 @@ export default function ReportConcernScreen() {
         />
         <View className="bg-white rounded-t-3xl px-6 pt-5 pb-10">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-xl font-bold text-navy">Report Submitted</Text>
+            <Text className="text-xl font-bold text-navy">
+              Report Submitted
+            </Text>
             <Pressable onPress={() => setShowSuccess(false)} hitSlop={12}>
               <X size={20} color="#0A1628" />
             </Pressable>

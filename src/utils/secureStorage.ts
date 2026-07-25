@@ -22,6 +22,7 @@ export const STORAGE_KEYS = {
   PIN_HASH: `${STORAGE_PREFIX}pin_hash`,
   OTP_TOKEN: `${STORAGE_PREFIX}otp_token`,
   ESTATE_PIN_VERIFIED: `${STORAGE_PREFIX}estate_pin_verified`,
+  BIOMETRIC_ENABLED: `${STORAGE_PREFIX}biometric_enabled`,
 } as const;
 
 const ALL_KEYS = Object.values(STORAGE_KEYS);

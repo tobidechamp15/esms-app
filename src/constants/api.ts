@@ -122,6 +122,7 @@ export const STORAGE_KEYS = {
   PIN_HASH: "ventry_pin_hash",
   OTP_TOKEN: "ventry_otp_token",
   ESTATE_PIN_VERIFIED: "ventry_estate_pin_verified",
+  BIOMETRIC_ENABLED: "ventry_biometric_enabled",
 } as const;
 
 export const REQUEST_TIMEOUT_MS = 15_000;

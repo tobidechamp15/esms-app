@@ -1,12 +1,20 @@
-import { apiClient } from './client';
-import { CONCERN_ENDPOINTS, USER_ENDPOINTS } from '@/constants/api';
-import type { ApiResponse, Concern, NotificationPreferences, User } from '@/types';
+import { apiClient } from "./client";
+import { CONCERN_ENDPOINTS, USER_ENDPOINTS } from "@/constants/api";
+import type {
+  ApiResponse,
+  Concern,
+  NotificationPreferences,
+  User,
+} from "@/types";
 
 export async function updateProfile(payload: {
   firstName?: string;
   lastName?: string;
 }): Promise<User> {
-  const { data } = await apiClient.patch<ApiResponse<User>>(USER_ENDPOINTS.ME, payload);
+  const { data } = await apiClient.patch<ApiResponse<User>>(
+    USER_ENDPOINTS.ME,
+    payload,
+  );
   return data.data;
 }
 
@@ -37,10 +45,10 @@ export async function submitConcern(
   attachment?: { uri: string; name: string; type: string },
 ): Promise<Concern> {
   const form = new FormData();
-  form.append('subject', subject);
-  form.append('address', address);
+  form.append("subject", subject);
+  form.append("address", address);
   if (attachment) {
-    form.append('attachment', {
+    form.append("attachment", {
       uri: attachment.uri,
       name: attachment.name,
       type: attachment.type,
@@ -50,7 +58,13 @@ export async function submitConcern(
   const { data } = await apiClient.post<ApiResponse<Concern>>(
     CONCERN_ENDPOINTS.BASE,
     form,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    {
+      // Do NOT set Content-Type manually — let Axios detect FormData and
+      // set multipart/form-data with the correct boundary automatically.
+      headers: { "Content-Type": undefined },
+      // Prevent the instance default (application/json) from overriding Axios' FormData detection
+      transformRequest: undefined,
+    },
   );
   return data.data;
 }
